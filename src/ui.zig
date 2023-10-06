@@ -408,7 +408,7 @@ fn handleInputEvent (ui : anytype, behavior : anytype, look : anytype, event : t
                             switch (@typeInfo(lptr.child)) {
                                 .Struct => {
                                     if (@hasDecl(ptr.child, "inputEvent")) {
-                                        return behavior.pointerEvent(ui, look, event);
+                                        return behavior.inputEvent(ui, look, event);
                                     }
                                     else {
                                         return error.NoInputHandler;

@@ -24,7 +24,7 @@ pub fn FixedPalette (comptime ThemeEnum : type) type  {
             else {
                 inline for (info.Enum.fields, 0..) |field, i| {
                     if (field.value == @intFromEnum(scheme)) {
-                        return @This().schemes[i];
+                        return self.schemes[i];
                     }
                 }
                 unreachable;
