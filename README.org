@@ -1,0 +1,54 @@
+#+title: Cake.zig
+
+Simple and modular UI toolkit for Zig programming language aiming to avoid mess of automatic layouts and cumbersomeness of manually doing them yourself.
+
+* Development Status
+The toolkit is in very early stage of development, none of its parts are considered stable and may get changed in the future.
+
+* Quick Start
+The toolkit has a few examples of how to use it in ./examples folder, take a look at each to see the general usage. To link the library, import ./build.zig into your build.zig and use addCake function. You must ensure it is linked to the backend library it uses for rendering, currently that being Raylib. Example how to do that can be found in ./build.zig file.
+
+You can run examples from the library with following command run in library's root folder
+#+BEGIN_SRC sh
+zig build example
+#+END_SRC
+You can select example to run with -Dexample option. See zig build --help for list of examples
+#+BEGIN_SRC sh
+zig build example -Dexample=password_form
+#+END_SRC
+
+* Why Cake?
+I've always found using various UI toolkits annoying in one way or another. Automatic layouts tend to be unpredictable, having to fight against the interpreter to get what you want, only for your forms to blow out one side or another because of state change or quickly get out of hand with CSS style hundreds of options when all you want is a simple window with a couple buttons. On the other hand, manually setting layouts is cumbersome and hard to reason about which takes out any fun from making interfaces, leaving you dreading the process and wanting to avoid it.
+
+The idea for this UI toolkit came from working on my game in C using Raylib. I've found myself grabbing the rectangle of the screen, and dividing it into progressively smaller chunks, kind of like cutting a cake into smaller pieces. I've found this to be the perfect balance between manual and automatic layouts, it being easy to imagine how the interface would look like while coding it.
+
+The main star of this toolkit is Rectangle struct which provides a bunch of functions to split and divide it. The rest of the toolkit is built around providing a structured way to create interfaces.
+
+* Contributing
+If you find value in the toolkit, consider [[https://www.buymeacoffee.com/purrie][donating]].
+
+Note that I consider myself to be the primary target audience of this toolkit as I've made it to help me with my projects. If you plan on contributing code to the library, make sure to post a proposal in the issues first to get it approved before sending any PRs since I'm not willing to make this project go in a direction I would find cumbersome or annoying to deal with.
+
+* License
+The MIT License (MIT)
+
+Copyright (c) 2023 Purrie Brightstar
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
