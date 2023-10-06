@@ -335,6 +335,7 @@ pub fn FixedUi (
     };
 }
 
+/// Handles drawing a widget, calculating its state, colors and other context information
 pub fn handleDrawingWidget (ui : anytype, widget : anytype) void {
     if (@typeInfo(@TypeOf(widget)) != .Pointer) @compileError("Widget must be passed by pointer");
 
@@ -371,6 +372,7 @@ pub fn handleDrawingWidget (ui : anytype, widget : anytype) void {
     };
     drawWidget(widget, &widget.look, context);
 }
+/// This function is used to unwrap the widget from inside of an union to call its draw function with provided context
 pub fn drawWidget (meta : anytype, widget : anytype, context : types.DrawingContext) void {
     const info = @typeInfo(@TypeOf(widget));
 
@@ -395,6 +397,7 @@ pub fn drawWidget (meta : anytype, widget : anytype, context : types.DrawingCont
     }
 }
 
+/// Recursively unwraps the widget from inside union type and call its InputEvent function
 fn handleInputEvent (ui : anytype, behavior : anytype, look : anytype, event : types.BehaviorContext) ! cake.EventResult {
     const behavior_info = @typeInfo(@TypeOf(behavior));
 
@@ -491,6 +494,7 @@ fn handlePointerEvent (ui : anytype, behavior : anytype, look : anytype, event :
         else => @compileError("Behavior must be passed by pointer"),
     }
 }
+/// Handles unwrapping widget behaviors from unions to call on the keyboardEvent handler with provided context
 fn handleKeyboardEvent (ui : anytype, behavior : anytype, look : anytype, event : types.KeyboardContext) ! void {
     switch (@typeInfo(@TypeOf(behavior))) {
         .Pointer => |bptr| {
@@ -534,6 +538,7 @@ fn handleKeyboardEvent (ui : anytype, behavior : anytype, look : anytype, event 
     }
 }
 
+/// Ensures the widget and behavior pair are compatible with each other, function recursively unwraps both from unions to pass the correct type to behavior validation function
 fn validateBehaviors (widget : anytype, behavior : anytype) ! void {
     const behavior_info = @typeInfo(@TypeOf(behavior));
 

@@ -149,6 +149,8 @@ pub fn cutHorizontal (self : *Rectangle, amount : f32, spacing : f32) Rectangle 
     }
     return result;
 }
+/// Cuts off top or bottom percentage of the rectangle depending on whatever the amount is positive or negative
+/// Spacing is always cut off the calling rect
 pub fn cutHorizontalPercent (self : *Rectangle, amount : f32, spacing : f32) Rectangle {
     assert(amount >= -1 and amount <= 1);
     assert(spacing >= 0);
@@ -156,6 +158,8 @@ pub fn cutHorizontalPercent (self : *Rectangle, amount : f32, spacing : f32) Rec
     const actual_spacing = self.size[1] * spacing;
     return self.cutHorizontal(actual_amount, actual_spacing);
 }
+/// Cuts off left or right side of the rectangle depending on whatever the amount is positive or negative
+/// Spacing is always cut off the calling rect
 pub fn cutVertical (self : *Rectangle, amount : f32, spacing : f32) Rectangle {
     const actual_amount = if (amount < 0) -amount else amount;
     const actual_diff = actual_amount + spacing;
@@ -173,6 +177,8 @@ pub fn cutVertical (self : *Rectangle, amount : f32, spacing : f32) Rectangle {
     }
     return result;
 }
+/// Cuts off left or right side by percentage of the rectangle depending on whatever the amount is positive or negative
+/// Spacing is always cut off the calling rect
 pub fn cutVerticalPercent (self : *Rectangle, amount : f32, spacing : f32) Rectangle {
     assert(amount >= -1 and amount <= 1);
     assert(spacing >= 0);

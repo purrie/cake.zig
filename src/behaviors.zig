@@ -15,6 +15,7 @@ pub fn BuiltinBehaviors (comptime Event : type) type {
     };
 }
 
+/// Buttons produce given event in host Ui when they're clicked and released
 pub fn Button (comptime Event : type) type {
     return struct {
         event : Event,
@@ -37,6 +38,13 @@ pub fn Button (comptime Event : type) type {
     };
 }
 
+/// Handles single line keyboard input
+/// Widget it is attached to must have following fields:
+/// margin : f32,
+/// text : []u8 or [:0]u8
+/// size : f32
+/// cursor : usize
+/// capacity : usize
 pub const TextInput = struct {
     pub fn validate (comptime look : type) ! void {
         const no_margin   = ! @hasField(look, "margin");

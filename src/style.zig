@@ -3,6 +3,7 @@ const Color = types.Color;
 const ColorScheme = types.ColorScheme;
 const StateColor = types.StateColor;
 
+/// Creates a palette that holds colors corresponding to each enum value
 pub fn FixedPalette (comptime ThemeEnum : type) type  {
     const info = @typeInfo(ThemeEnum);
     if (info != .Enum) {
@@ -45,6 +46,7 @@ pub fn FixedPalette (comptime ThemeEnum : type) type  {
     };
 }
 
+/// Enumeration for default color palette
 pub const DefaultTheme = enum {
     normal,
     highlight,
@@ -53,6 +55,7 @@ pub const DefaultTheme = enum {
 };
 pub const DefaultPalette = FixedPalette(DefaultTheme);
 
+/// Default color palette with light shade color scheme
 pub const light_theme = DefaultPalette {
     .schemes = [_]ColorScheme{
         ColorScheme.contrastingBase(.{ .r = 0xf0, .g = 0xf0, .b = 0xf0 }),
@@ -61,6 +64,7 @@ pub const light_theme = DefaultPalette {
         ColorScheme.contrastingBase(.{ .r = 0xe0, .g = 0x80, .b = 0x80 }),
     }
 };
+/// Default color palette with dark shaded color scheme
 pub const dark_theme = DefaultPalette {
     .schemes = [_]ColorScheme{
         ColorScheme.contrastingBase(.{ .r = 0x20, .g = 0x20, .b = 0x20 }),

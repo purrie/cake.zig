@@ -16,6 +16,7 @@ pub const BuiltinWidgets = union (enum) {
     frame      : Frame,
 };
 
+/// Simple widget for drawing left side aligned text
 pub const Label = struct {
     text : []const u8,
     size : f32 = 20,
@@ -26,6 +27,7 @@ pub const Label = struct {
         renderer.drawText(self.text, context.area.position, @min(self.size, context.area.size[1]), color);
     }
 };
+/// Draws left side aligned text with background
 pub const TextField = struct {
     text : []const u8,
     size : f32 = 20,
@@ -41,6 +43,7 @@ pub const TextField = struct {
         renderer.drawText(self.text, zone.position, @min(self.size, zone.size[1]), color);
     }
 };
+/// Draws centered text with background.
 pub const TextDisplay = struct {
     text : []const u8,
     size : f32 = 20,
@@ -59,6 +62,7 @@ pub const TextDisplay = struct {
         renderer.drawText(self.text, zone.position, size, color);
     }
 };
+/// Draws left side aligned text with background. It's designed to work with TextInput behavior.
 pub const TextInput = struct {
     text : []u8,
     capacity : usize,
@@ -90,6 +94,7 @@ pub const TextInput = struct {
         }
     }
 };
+/// Draws simple color
 pub const Background = struct {
     pub fn draw (self : Background, widget : anytype, context : Context) void {
         _ = widget;
@@ -98,6 +103,7 @@ pub const Background = struct {
         renderer.drawRectangle(context.area, color);
     }
 };
+/// Draws frame around its area
 pub const Frame = struct {
     thickness : f32 = 1.0,
 

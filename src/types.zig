@@ -9,6 +9,7 @@ pub const Vector = @Vector(2, f32);
 pub const vector_zero = Vector { 0.0, 0.0 };
 pub const vector_one = Vector { 1.0, 1.0 };
 
+/// Responsible for describing which states are active in a widget
 pub const DrawState = packed struct {
     normal : bool = true,
     hover : bool = true,
@@ -92,6 +93,8 @@ pub const Color = packed struct {
     pub const cyan   = Color.hex( 0x10f0f0ff );
     pub const purple = Color.hex( 0xf010f0ff );
 };
+
+/// Contains colors for specific widget states
 pub const StateColor = struct {
     normal : Color,
     hover : Color,
@@ -119,6 +122,7 @@ pub const StateColor = struct {
     }
 };
 
+/// Container for colors based on their purpose
 pub const ColorScheme = struct {
     background : StateColor,
     foreground : StateColor,
@@ -184,12 +188,19 @@ pub const PointerEvent = union (enum) {
     wheel_delta  : Vector,
 };
 
+/// Result of a pointer event, used to determine which state the widget should go into as a result of the event
 pub const EventResult = enum {
+    /// Widget gains focus and is active
     activated,
+    /// Widget retains focus and is deactivated
     deactivated,
+    /// Widget gains focus
     focused,
+    /// Widget loses focus and active status
     unfocused,
+    /// No change in status
     processed,
+    /// Event was ignored and should pass on to another widget
     ignored,
 };
 
@@ -216,29 +227,34 @@ pub const KeyboardModifier = packed struct {
         return self.control_left or self.control_right;
     }
 };
+/// Keyboard event description, use backend to create the full description
 pub const KeyboardEvent = struct {
     character : ?u32 = null,
     keycode   : ?u32 = null,
     modifiers : KeyboardModifier = .{},
 };
 
+/// Data passed to widgets on drawing events
 pub const DrawingContext = struct {
     area     : Rectangle,
     position : ?Vector,
     colors   : ColorScheme,
     state    : DrawState,
 };
+/// Data passed to widgets on input events
 pub const BehaviorContext = struct {
     area     : Rectangle,
     position : ?Vector,
     pointer  : ?PointerEvent,
     keyboard : ?KeyboardEvent,
 };
+/// Data passed to widgets on pointer events
 pub const PointerContext = struct {
     area     : Rectangle,
     position : Vector,
     pointer  : PointerEvent,
 };
+/// Data passed to widgets on keyboard events
 pub const KeyboardContext = struct {
     area     : Rectangle,
     keyboard : KeyboardEvent,
