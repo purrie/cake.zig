@@ -59,11 +59,12 @@ pub fn addCake (
     optimize : std.builtin.OptimizeMode,
     backend : Backend,
 ) *std.Build.CompileStep {
+    const src = comptime std.fs.path.dirname(@src().file).?;
     const cake = b.addStaticLibrary(.{
         .name = "cake",
         .target = target,
         .optimize = optimize,
-        .root_source_file = .{ .path = "src/cake.zig" },
+        .root_source_file = .{ .path = src ++ "/src/cake.zig" },
     });
 
     const opt = b.addOptions();
