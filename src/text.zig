@@ -41,7 +41,7 @@ pub fn inputTextUnicode (
     @memcpy(input[pointer..][0..len], uni[0..len]);
     return len;
 }
-/// Calculates how many bytes the cursor must move to be at next character
+/// Moves the cursor to the next character, taking into account multibyte unicode characters
 pub fn moveCursorCharForward (text : []const u8, cursor : *usize) void {
     if (cursor.* >= text.len) {
         cursor.* = text.len;
@@ -55,7 +55,7 @@ pub fn moveCursorCharForward (text : []const u8, cursor : *usize) void {
     const len = std.unicode.utf8ByteSequenceLength(text[cursor.*]) catch 1;
     cursor.* += len;
 }
-/// Calculates how many bytes the cursor must move to be at previous character
+/// Moves the cursor to previous character, taking into account multibyte unicode characters
 pub fn moveCursorCharBackward (text : []const u8, cursor : *usize) void {
     if (cursor.* == 0) {
         return;

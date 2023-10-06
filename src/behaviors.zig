@@ -48,9 +48,20 @@ pub const TextInput = struct {
             return error.InvalidWidget;
         }
     }
-    pub fn inputEvent (self : *TextInput, ui : anytype, look : anytype, pointer : anytype, keyboard : KeyboardContext) ! cake.EventResult {
-        try self.keyboardEvent(ui, look, keyboard);
-        return self.pointerEvent(ui, look, pointer);
+    pub fn inputEvent (self : *TextInput, ui : anytype, look : anytype, event : types.BehaviorContext) ! cake.EventResult {
+        const result = .ignored;
+
+        if (event.keyboard) |kb| {
+            try self.keyboardEvent(ui, look, .{ .area = event.area, .keyboard = kb });
+            result = .processed;
+        }
+        if (event.pointer) |ptr| {
+            if (event.position) |pos| {
+                result = self.pointerEvent(ui, look, .{ .area = event.area, .pointer = ptr, .position = pos });
+            }
+        }
+
+        return result;
     }
     pub fn keyboardEvent (self : *TextInput, ui : anytype, look : anytype, event : KeyboardContext) ! void {
         _ = ui;

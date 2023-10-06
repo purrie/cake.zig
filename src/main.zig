@@ -6,9 +6,7 @@ const options = @import("build_options");
 pub const backend = switch (options.backend) {
     .raylib => @import("backend/raylib.zig"),
 };
-pub const widgets = switch(options.backend) {
-    .raylib => @import("widgets_zero.zig"),
-};
+pub const widgets = @import("widgets.zig");
 pub const behaviors = @import("behaviors.zig");
 
 pub const text = @import("text.zig");

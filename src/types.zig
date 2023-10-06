@@ -228,8 +228,6 @@ pub const DrawingContext = struct {
     colors   : ColorScheme,
     state    : DrawState,
 };
-// TODO implement behaviors
-// This will decouple handling input events from drawing functions
 pub const BehaviorContext = struct {
     area     : Rectangle,
     position : ?Vector,

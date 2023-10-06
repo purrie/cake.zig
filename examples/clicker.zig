@@ -352,7 +352,7 @@ const BakeButton = struct {
     pub fn draw (self : *const @This()) void {
         self.interface.draw();
     }
-    pub fn getTooltip (self : *const @This(), writer : anytype) bool {
+    pub fn getTooltip (self : *@This(), writer : anytype) bool {
         if (self.interface.getHoveredWidget() != null) {
             writer.print("Click to bake a cookie", .{}) catch unreachable;
             return true;
@@ -494,7 +494,7 @@ const PurchaseButtons = struct {
     pub fn draw (self : *const @This()) void {
         self.interface.draw();
     }
-    pub fn getTooltip (self : *const @This(), writer : anytype) bool {
+    pub fn getTooltip (self : *@This(), writer : anytype) bool {
         if (self.interface.getHoveredWidget()) |wid| {
             if (wid.meta.identity) |id| {
                 const cost = switch (id) {

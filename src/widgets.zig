@@ -108,6 +108,3 @@ pub const Frame = struct {
     }
 };
 
-pub const Image = struct {
-    handle : []const u8, // TODO this should probably be backend specific?
-};

@@ -12,8 +12,6 @@ const DrawState = types.DrawState;
 const ColorScheme = types.ColorScheme;
 const KeyboardEvent = types.KeyboardEvent;
 
-const assert = std.debug.assert;
-
 pub const Context = struct {
     Widget   : type = widgets.BuiltinWidgets,
     Behavior : type = void,
@@ -152,6 +150,9 @@ pub fn FixedUi (
         }
         pub fn layout (self : *Ui) LayoutContext {
             self.len = 0;
+            self.hover = null;
+            self.focus = null;
+            self.active = null;
             return LayoutContext{ .ui = self };
         }
         pub fn setPointerPosition (self : *Ui, position : ?Vector) void {
@@ -302,7 +303,7 @@ pub fn FixedUi (
             defer self.event = null;
             return self.event;
         }
-        pub fn getHoveredWidget (self : *const Ui) ?*const Widget {
+        pub fn getHoveredWidget (self : *Ui) ?*Widget {
             return self.hover;
         }
         pub fn getFocusedWidget (self : *Ui) ?*Widget {
@@ -337,7 +338,7 @@ pub fn FixedUi (
 pub fn handleDrawingWidget (ui : anytype, widget : anytype) void {
     if (@typeInfo(@TypeOf(widget)) != .Pointer) @compileError("Widget must be passed by pointer");
 
-    const over = if (ui.pointer) |pos| widget.area.contains(pos) else false;
+    const over = ui.hover == widget;
 
     var draw_filter = DrawState{
         .focus = widget == ui.focus,
@@ -394,7 +395,7 @@ pub fn drawWidget (meta : anytype, widget : anytype, context : types.DrawingCont
     }
 }
 
-fn handleInputEvent (ui : anytype, behavior : anytype, look : anytype, pointer : types.PointerContext, keyboard : types.KeyboardContext) ! cake.EventResult {
+fn handleInputEvent (ui : anytype, behavior : anytype, look : anytype, event : types.BehaviorContext) ! cake.EventResult {
     const behavior_info = @typeInfo(@TypeOf(behavior));
 
     switch (behavior_info) {
@@ -407,7 +408,7 @@ fn handleInputEvent (ui : anytype, behavior : anytype, look : anytype, pointer :
                             switch (@typeInfo(lptr.child)) {
                                 .Struct => {
                                     if (@hasDecl(ptr.child, "inputEvent")) {
-                                        return behavior.pointerEvent(ui, look, pointer, keyboard);
+                                        return behavior.pointerEvent(ui, look, event);
                                     }
                                     else {
                                         return error.NoInputHandler;
@@ -417,7 +418,7 @@ fn handleInputEvent (ui : anytype, behavior : anytype, look : anytype, pointer :
                                     if (uni.tag_type == null) @compileError("Look union must be tagged");
                                     switch (look.*) {
                                         inline else => |*lo| {
-                                            return handleInputEvent(ui, behavior, lo, pointer, keyboard);
+                                            return handleInputEvent(ui, behavior, lo, event);
                                         }
                                     }
                                 },
@@ -431,7 +432,7 @@ fn handleInputEvent (ui : anytype, behavior : anytype, look : anytype, pointer :
                     if (uni.tag_type == null) @compileError("Behavior union must be tagged");
                     switch (behavior.*) {
                         inline else => |*beh| {
-                            return handleInputEvent(ui, beh, look, pointer, keyboard);
+                            return handleInputEvent(ui, beh, look, event);
                         }
                     }
                 },
