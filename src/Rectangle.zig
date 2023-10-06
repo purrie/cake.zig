@@ -54,13 +54,27 @@ pub fn shrinkToPercent (self : *Rectangle, percent : Vector) void {
     self.size = p;
     self.position += diff * vector_half;
 }
-pub fn shrinkWidth (self : *Rectangle, width : f32) void {
+pub fn shrinkWidthTo (self : *Rectangle, width : f32) void {
+    assert (width <= self.size[0]);
+
+    const diff = self.size[0] - width;
+    self.size[0] = width;
+    self.position[0] += diff * 0.5;
+}
+pub fn shrinkWidthBy (self : *Rectangle, width : f32) void {
     assert(width <= self.size[0]);
 
     self.size[0] -= width;
     self.position[0] += width * 0.5;
 }
-pub fn shrinkHeight (self : *Rectangle, height : f32) void {
+pub fn shrinkHeightTo (self : *Rectangle, height : f32) void {
+    assert(self.size[1] >= height);
+
+    const diff = self.size[1] - height;
+    self.size[1] = height;
+    self.position[1] += diff * 0.5;
+}
+pub fn shrinkHeightBy (self : *Rectangle, height : f32) void {
     assert(height <= self.size[1]);
 
     self.size[1] -= height;
@@ -135,13 +149,56 @@ pub fn cutHorizontal (self : *Rectangle, amount : f32, spacing : f32) Rectangle 
     }
     return result;
 }
-
 pub fn cutHorizontalPercent (self : *Rectangle, amount : f32, spacing : f32) Rectangle {
     assert(amount >= -1 and amount <= 1);
     assert(spacing >= 0);
     const actual_amount = self.size[1] * amount;
     const actual_spacing = self.size[1] * spacing;
     return self.cutHorizontal(actual_amount, actual_spacing);
+}
+pub fn cutVertical (self : *Rectangle, amount : f32, spacing : f32) Rectangle {
+    const actual_amount = if (amount < 0) -amount else amount;
+    const actual_diff = actual_amount + spacing;
+    assert(spacing >= 0);
+    assert(self.size[0] >= actual_diff);
+
+    var result = self.*;
+    result.size[0] = actual_amount;
+    self.size[0] -= actual_diff;
+    if (amount >= 0) {
+        self.position[0] += actual_diff;
+    }
+    else {
+        result.position[0] += self.size[0] + spacing;
+    }
+    return result;
+}
+pub fn cutVerticalPercent (self : *Rectangle, amount : f32, spacing : f32) Rectangle {
+    assert(amount >= -1 and amount <= 1);
+    assert(spacing >= 0);
+    const actual_amount = self.size[0] * amount;
+    const actual_spacing = self.size[0] * spacing;
+    return self.cutVertical(actual_amount, actual_spacing);
+}
+
+pub fn clampInsideOf (self : *Rectangle, borders : Rectangle) void {
+    const too_large = self.size > borders.size;
+    if (@reduce(.Or, too_large)) {
+        self.size = @select(f32, too_large, borders.size, self.size);
+    }
+
+    const local = self.position - borders.position;
+    const too_small = local < vector_zero;
+    if (@reduce(.Or, too_small)) {
+        self.position = @select(f32, too_small, vector_zero, self.position);
+    }
+
+    const over = (self.position + self.size) - (borders.position + borders.size);
+    const outside = over > vector_zero;
+    if (@reduce(.Or, outside)) {
+        const diff = @select(f32, outside, over, vector_zero);
+        self.position -= diff;
+    }
 }
 
 test "horizontal cutting" {

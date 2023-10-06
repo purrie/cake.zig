@@ -2,10 +2,28 @@ const std = @import("std");
 const cake = @import("cake");
 const ray = @cImport(@cInclude("raylib.h"));
 
-const Core = struct {
+const LoginForm = struct {
+    const WidgetAction = enum {
+        accept,
+        cancel,
+    };
+    const FormResult = enum {
+        accept,
+        wrong_login,
+        wrong_password,
+    };
+    const Form = cake.FixedUi(
+        .{
+            .UiEvent = WidgetAction,
+            .Behavior = cake.behaviors.BuiltinBehaviors(WidgetAction),
+        },
+        12
+    );
+
     const font_size : f32 = 20;
     const margin : f32 = 8;
 
+    interface : Form = .{ .theme = cake.theme_light },
     area : cake.Rectangle,
     login_buffer : [9]u8 = [_]u8{0} ** 9,
     password_buffer : [9]u8 = [_]u8{0} ** 9,
@@ -15,11 +33,12 @@ const Core = struct {
     const login_label = "Login:";
     const password_label = "Password:";
 
-    pub fn uiLayout (self : *const @This(), ui : Form.LayoutContext) ! void {
+    pub fn uiLayout (self : *@This()) ! void {
+        const ui = self.interface.layout();
         var area = self.area;
-        try ui.addWidget(area, .{ .background = .{} }, .{});
+        try ui.addPlainWidget(area, .{ .background = .{} });
         area.shrinkBy(@splat(3));
-        try ui.addWidget(area, .{ .frame = .{ .thickness = 2 } }, .{});
+        try ui.addPlainWidget(area, .{ .frame = .{ .thickness = 2 } });
 
         area.shrinkBy(@splat(8));
         var button_line = area.cutHorizontalPercent(-0.2, 0.1);
@@ -37,13 +56,13 @@ const Core = struct {
                     .capacity = 9,
                 }
             },
-            .{ .theme = .highlight, .can_focus = true }
+            .{ .text_input = .{} },
+            .{ .theme = .highlight }
         );
         areas[0].move(.{ 0, -(margin + font_size) });
-        try ui.addWidget(
+        try ui.addPlainWidget(
             areas[0],
-            .{ .label = .{ .text = login_label[0..], .size = font_size } },
-            .{}
+            .{ .label = .{ .text = login_label[0..], .size = font_size } }
         );
 
         areas[1].shrinkTo(.{ areas[1].size[0] - margin, font_size + margin });
@@ -56,28 +75,30 @@ const Core = struct {
                     .capacity = 9,
                 }
             },
-            .{ .theme = .highlight, .can_focus = true }
+            .{ .text_input = .{} },
+            .{ .theme = .highlight }
         );
         areas[1].move(.{ 0, -(margin + font_size) });
-        try ui.addWidget(
+        try ui.addPlainWidget(
             areas[1],
-            .{ .label = .{ .text = password_label[0..], .size = font_size } },
-            .{}
+            .{ .label = .{ .text = password_label[0..], .size = font_size } }
         );
 
         var buttons = button_line.splitVerticalPercent(2, 0.1);
         buttons[0].shrinkByPercent(.{ 0.4, 0.1 });
         try ui.addWidget(
             buttons[0],
-            .{ .button = .{ .text = accept_label, .size = font_size, .event = .accept } },
-            .{ .theme = .interactive, .interaction = true }
+            .{ .display = .{ .text = accept_label, .size = font_size } },
+            .{ .button = .{ .event = .accept } },
+            .{ .theme = .interactive }
         );
 
         buttons[1].shrinkByPercent(.{ 0.4, 0.1 });
         try ui.addWidget(
             buttons[1],
-            .{ .button = .{ .text = cancel_label, .size = font_size, .event = .cancel } },
-            .{ .theme = .interactive, .interaction = true }
+            .{ .display = .{ .text = cancel_label, .size = font_size } },
+            .{ .button = .{ .event = .cancel } },
+            .{ .theme = .interactive }
         );
     }
 
@@ -98,77 +119,72 @@ const Core = struct {
             return .wrong_login;
         }
     }
+
+    pub fn update (self : *@This()) ! ?WidgetAction {
+        const cursor = ray.GetMousePosition();
+        self.interface.setPointerPosition(@bitCast(cursor));
+
+        if (ray.IsMouseButtonPressed(ray.MOUSE_BUTTON_LEFT)) {
+            try self.interface.sendPointerEvent(.{ .press = .left });
+        }
+        if (ray.IsMouseButtonReleased(ray.MOUSE_BUTTON_LEFT)) {
+            try self.interface.sendPointerEvent(.{ .lift = .left });
+        }
+        if (cake.backend.input.keyboardEvent()) |ev| {
+            try self.interface.sendKeyboardEvent(ev);
+        }
+        return self.interface.popEvent();
+    }
 };
 
-const WidgetAction = enum {
-    accept,
-    cancel,
+
+const TextUi = struct {
+    const Ui = cake.FixedUi(.{.Widget = cake.widgets.TextDisplay}, 1);
+    interface : Ui = .{ .theme = cake.theme_light },
+    area : cake.Rectangle,
+
+    pub fn uiLayout (self : *@This(), ui : TextUi.LayoutContext) ! void {
+        try ui.addPlainWidget(self.area, .{ .text = self.text });
+    }
+    pub fn setText (self : *@This(), text : []const u8) ! void {
+        const ui = self.interface.layout();
+        try ui.addPlainWidget(self.area, .{ .text = text });
+    }
 };
-const FormResult = enum {
-    accept,
-    wrong_login,
-    wrong_password,
-};
-const Form = cake.FixedUi(
-    .{
-        .Core = Core,
-        .Widget = cake.widgets.ExtendedWidgets(WidgetAction),
-        .Interaction = bool,
-        .UiEvent = WidgetAction,
-    },
-    12
-);
-
-const TextUi = cake.FixedUi(
-    .{
-        .Core = struct {
-            text : [:0]const u8 = "",
-            area : cake.Rectangle,
-
-            pub fn uiLayout (self : *@This(), ui : TextUi.LayoutContext) ! void {
-                try ui.addWidget(self.area, .{ .text = self.text }, .{});
-            }
-        },
-        .Widget = cake.widgets.TextDisplay,
-    },
-    1
-);
-
 
 pub fn main() !void {
-    ray.InitWindow(800, 600, "Basic Styling");
+    ray.InitWindow(800, 600, "Login Form");
     defer ray.CloseWindow();
 
-    var area = cake.backend.view.windowArea();
-    area.shrinkTo(.{300, 200});
-    var ui = Form.init(.{ .area = area, }, cake.theme_light);
-    try ui.bake();
+    var ui = LoginForm{
+        .area = ar: {
+            var area = cake.backend.view.windowArea();
+            area.shrinkTo(.{300, 200});
+            break :ar area;
+        }
+    };
+    try ui.uiLayout();
+
+    var result_ui = TextUi{
+        .area = ar: {
+            var scr = cake.backend.view.windowArea();
+            scr.shrinkByPercent(.{0.5, 0.5});
+            break :ar scr;
+        }
+    };
+    var hint = TextUi{
+        .area = ar: {
+            var scr = cake.backend.view.windowArea();
+            scr = scr.cutHorizontalPercent(-0.2, 0);
+            scr.shrinkByPercent(.{ 0.3, 0.2 });
+            break :ar scr;
+        }
+    };
 
     var login_accepted : bool = false;
     var countdown : f32 = 3;
-    var result_ui = TextUi.init(
-        .{
-            .area = ar: {
-                var scr = cake.backend.view.windowArea();
-                scr.shrinkByPercent(.{0.5, 0.5});
-                break :ar scr;
-            }
-        },
-        cake.theme_light
-    );
-    var hint = TextUi.init(
-        .{
-            .text = "login: cake, password: yummy",
-            .area = ar: {
-                var scr = cake.backend.view.windowArea();
-                scr = scr.cutHorizontalPercent(-0.2, 0);
-                scr.shrinkByPercent(.{ 0.3, 0.2 });
-                break :ar scr;
-            }
-        },
-        cake.theme_light
-    );
-    try hint.bake();
+
+    try hint.setText("login: cake, password: yummy");
 
     while (ray.WindowShouldClose() == false) {
         ray.BeginDrawing();
@@ -176,57 +192,39 @@ pub fn main() !void {
 
         ray.ClearBackground(ray.BLACK);
         if (login_accepted) {
-            result_ui.draw();
+            result_ui.interface.draw();
             countdown -= ray.GetFrameTime();
             if (countdown < 0) break;
         }
         else {
-            const cursor = ray.GetMousePosition();
-            ui.setPointerPosition(@bitCast(cursor));
-
-            if (ray.IsMouseButtonPressed(ray.MOUSE_BUTTON_LEFT)) {
-                try ui.sendPointerEvent(.{ .press = .left });
-            }
-            if (ray.IsMouseButtonReleased(ray.MOUSE_BUTTON_LEFT)) {
-                try ui.sendPointerEvent(.{ .lift = .left });
-            }
-            if (cake.backend.input.keyboardEvent()) |ev| {
-                try ui.sendKeyboardEvent(ev);
-            }
-
-            if (ui.popEvent()) |ev| switch (ev) {
+            if (try ui.update()) |ev| switch (ev) {
                 .accept => {
-                    switch (ui.core.validateLogin()) {
+                    switch (ui.validateLogin()) {
                         .accept => {
-                            result_ui.core.text = "Login Successful!";
-                            try result_ui.bake();
+                            try result_ui.setText("Login Successful!");
                             login_accepted = true;
-                            countdown = 3;
                         },
                         .wrong_login => {
-                            hint.core.text = "Incorrect Login";
-                            try hint.bake();
-                            countdown = 3;
+                            try hint.setText("Incorrect Login, type: cake");
                         },
                         .wrong_password => {
-                            hint.core.text = "Incorrect Password";
-                            try hint.bake();
-                            countdown = 3;
+                            try hint.setText("Incorrect Password, type: yummy");
                         },
                     }
+                    countdown = 3;
                 },
                 .cancel => {
-                    result_ui.core.text = "Login Aborted!";
-                    try result_ui.bake();
+                    try result_ui.setText("Login Aborted!");
                     login_accepted = true;
                     countdown = 3;
                 },
             };
+
             if (countdown > 0) {
-                hint.draw();
+                hint.interface.draw();
                 countdown -= ray.GetFrameTime();
             }
-            ui.draw();
+            ui.interface.draw();
         }
     }
 }

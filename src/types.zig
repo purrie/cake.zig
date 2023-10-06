@@ -1,24 +1,27 @@
 const std = @import("std");
+
 const floatEql = std.math.approxEqAbs;
 const floatEpsilon = std.math.floatEps;
+
+const Rectangle = @import("Rectangle.zig");
 
 pub const Vector = @Vector(2, f32);
 pub const vector_zero = Vector { 0.0, 0.0 };
 pub const vector_one = Vector { 1.0, 1.0 };
 
-pub const DrawFilter = packed struct {
+pub const DrawState = packed struct {
     normal : bool = true,
     hover : bool = true,
     focus : bool = true,
     active : bool = true,
 
-    pub fn isMismatch (self : DrawFilter, other : DrawFilter) bool {
+    pub fn isMismatch (self : DrawState, other : DrawState) bool {
         const me : u4 = @bitCast(self);
         const you : u4 = @bitCast(other);
         return me & you == 0;
     }
 
-    pub fn selectColor (self : DrawFilter, state : *const StateColor) Color {
+    pub fn selectColor (self : DrawState, state : StateColor) Color {
         if (self.active) return state.press;
         if (self.hover) return state.hover;
         if (self.focus) return state.focus;
@@ -174,20 +177,12 @@ pub const PointerButton = enum {
     forward,
     back,
 };
-pub const PointerEventKind = union (enum) {
+pub const PointerEvent = union (enum) {
     press : PointerButton,
     lift  : PointerButton,
     wheel_slide  : f32,
     wheel_delta  : Vector,
 };
-pub fn PointerEvent (comptime Widget : type, comptime Metadata : type) type {
-    return struct {
-        widget : *Widget,
-        meta   : *Metadata,
-        idx    : usize,
-        kind   : PointerEventKind,
-    };
-}
 
 pub const EventResult = enum {
     activated,
@@ -225,4 +220,28 @@ pub const KeyboardEvent = struct {
     character : ?u32 = null,
     keycode   : ?u32 = null,
     modifiers : KeyboardModifier = .{},
+};
+
+pub const DrawingContext = struct {
+    area     : Rectangle,
+    position : ?Vector,
+    colors   : ColorScheme,
+    state    : DrawState,
+};
+// TODO implement behaviors
+// This will decouple handling input events from drawing functions
+pub const BehaviorContext = struct {
+    area     : Rectangle,
+    position : ?Vector,
+    pointer  : ?PointerEvent,
+    keyboard : ?KeyboardEvent,
+};
+pub const PointerContext = struct {
+    area     : Rectangle,
+    position : Vector,
+    pointer  : PointerEvent,
+};
+pub const KeyboardContext = struct {
+    area     : Rectangle,
+    keyboard : KeyboardEvent,
 };

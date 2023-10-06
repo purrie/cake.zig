@@ -1,5 +1,5 @@
 const types = @import("types.zig");
-const ui = @import("ui.zig");
+pub const ui = @import("ui.zig");
 const style = @import("style.zig");
 const options = @import("build_options");
 
@@ -9,6 +9,7 @@ pub const backend = switch (options.backend) {
 pub const widgets = switch(options.backend) {
     .raylib => @import("widgets_zero.zig"),
 };
+pub const behaviors = @import("behaviors.zig");
 
 pub const text = @import("text.zig");
 
@@ -18,7 +19,6 @@ pub const Context = ui.Context;
 
 pub const Rectangle = @import("Rectangle.zig");
 pub const Vector = types.Vector;
-pub const DrawFilter = types.DrawFilter;
 
 pub const ColorScheme = types.ColorScheme;
 pub const StateColor = types.StateColor;
@@ -29,6 +29,7 @@ pub const PointerEvent = types.PointerEvent;
 pub const PointerButton = types.PointerButton;
 pub const KeyboardEvent = types.KeyboardEvent;
 pub const KeyboardModifier = types.KeyboardModifier;
+pub const KeyboardContext = types.KeyboardContext;
 
 pub const theme_light = style.light_theme;
 pub const theme_dark = style.dark_theme;
