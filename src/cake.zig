@@ -1,6 +1,6 @@
-const types = @import("types.zig");
+pub const types = @import("types.zig");
 pub const ui = @import("ui.zig");
-const style = @import("style.zig");
+pub const style = @import("style.zig");
 const options = @import("build_options");
 
 pub const backend = switch (options.backend) {
@@ -12,8 +12,11 @@ pub const behaviors = @import("behaviors.zig");
 pub const text = @import("text.zig");
 
 pub const FixedUi = ui.FixedUi;
-pub const FixedPallete = style.FixedPalette;
 pub const Context = ui.Context;
+
+pub const FixedPalette = style.FixedPalette;
+pub const DefaultPalette = style.DefaultPalette;
+pub const DefaultTheme = style.DefaultTheme;
 
 pub const Rectangle = @import("Rectangle.zig");
 pub const Vector = types.Vector;
