@@ -19,7 +19,7 @@ pub fn build(b: *std.Build) void {
         .name = "cake",
         // In this case the main source file is merely a path, however, in more
         // complicated build scripts, this could be a generated file.
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = .{ .path = "src/cake.zig" },
         .target = target,
         .optimize = optimize,
     });
@@ -32,7 +32,7 @@ pub fn build(b: *std.Build) void {
     // Creates a step for unit testing. This only builds the test executable
     // but does not run it.
     const main_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = .{ .path = "src/cake.zig" },
         .target = target,
         .optimize = optimize,
     });
@@ -48,7 +48,7 @@ pub fn build(b: *std.Build) void {
     buildExample(b, target, optimize);
 }
 
-pub const Backend = @import("src/main.zig").Backend;
+pub const Backend = @import("src/cake.zig").Backend;
 
 /// Adds cake module to the provided build step
 /// User is responsible for linking any backend rendering libraries in use
@@ -63,7 +63,7 @@ pub fn addCake (
         .name = "cake",
         .target = target,
         .optimize = optimize,
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = .{ .path = "src/cake.zig" },
     });
 
     const opt = b.addOptions();

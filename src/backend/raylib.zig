@@ -1,6 +1,6 @@
 const std = @import("std");
 const ray = @cImport(@cInclude("raylib.h"));
-const cake = @import("../main.zig");
+const cake = @import("../cake.zig");
 
 const Rectangle = cake.Rectangle;
 const Color     = cake.Color;

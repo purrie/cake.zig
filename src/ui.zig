@@ -1,5 +1,5 @@
 const std = @import("std");
-const cake = @import("main.zig");
+const cake = @import("cake.zig");
 const types = @import("types.zig");
 const style = @import("style.zig");
 const widgets = cake.widgets;
