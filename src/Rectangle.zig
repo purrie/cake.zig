@@ -75,6 +75,20 @@ pub fn shrinkWidthBy (self : *Rectangle, width : f32) void {
     self.position[0] += width * 0.5;
 }
 /// Decreases size of the rect while keeping it in the center
+pub fn shrinkWidthToPercent (self : *Rectangle, width : f32) void {
+    assert(width >= 0 and width <= 1);
+
+    const w = self.size[1] * width;
+    self.shrinkWidthTo(w);
+}
+/// Decreases size of the rect while keeping it in the center
+pub fn shrinkWidthByPercent (self : *Rectangle, width : f32) void {
+    assert(width >= 0 and width <= 1);
+
+    const w = self.size[1] * width;
+    self.shrinkWidthBy(w);
+}
+/// Decreases size of the rect while keeping it in the center
 pub fn shrinkHeightTo (self : *Rectangle, height : f32) void {
     assert(self.size[1] >= height);
 
@@ -88,6 +102,20 @@ pub fn shrinkHeightBy (self : *Rectangle, height : f32) void {
 
     self.size[1] -= height;
     self.position += height * 0.5;
+}
+/// Decreases size of the rect while keeping it in the center
+pub fn shrinkHeightToPercent (self : *Rectangle, height : f32) void {
+    assert(height >= 0 and height <= 1);
+
+    const h = self.size[1] * height;
+    self.shrinkHeightTo(h);
+}
+/// Decreases size of the rect while keeping it in the center
+pub fn shrinkHeightByPercent (self : *Rectangle, height : f32) void {
+    assert(height >= 0 and height <= 1);
+
+    const h = self.size[1] * height;
+    self.shrinkHeightBy(h);
 }
 
 /// Decreases size of the rect towards the bottom right corner
@@ -140,6 +168,20 @@ pub fn squishWidthBy (self : *Rectangle, width : f32) void {
     self.size[0] -= width;
     self.position[0] += width;
 }
+/// Decreases size of the rect towards the right side
+pub fn squishWidthToPercent (self : *Rectangle, width : f32) void {
+    assert(width >= 0 and width <= 1);
+
+    const w = self.size[1] * width;
+    self.squishWidthTo(w);
+}
+/// Decreases size of the rect towards the right side
+pub fn squishWidthByPercent (self : *Rectangle, width : f32) void {
+    assert(width >= 0 and width <= 1);
+
+    const w = self.size[1] * width;
+    self.squishWidthBy(w);
+}
 /// Decreases size of the rect towards the bottom
 pub fn squishHeightTo (self : *Rectangle, height : f32) void {
     assert(self.size[1] >= height);
@@ -154,6 +196,20 @@ pub fn squishHeightBy (self : *Rectangle, height : f32) void {
 
     self.size[1] -= height;
     self.position += height;
+}
+/// Decreases size of the rect towards the bottom
+pub fn squishHeightToPercent (self : *Rectangle, height : f32) void {
+    assert(height >= 0 and height <= 1);
+
+    const h = self.size[1] * height;
+    self.squishHeightTo(h);
+}
+/// Decreases size of the rect towards the bottom
+pub fn squishHeightByPercent (self : *Rectangle, height : f32) void {
+    assert(height >= 0 and height <= 1);
+
+    const h = self.size[1] * height;
+    self.squishHeightBy(h);
 }
 
 /// Splits the rect into equally sized rectangles with optional spacing between them
