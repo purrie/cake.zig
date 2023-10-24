@@ -23,6 +23,7 @@ pub fn contains (self : Rectangle, point : Vector) bool {
 pub fn move (self : *Rectangle, delta : Vector) void {
     self.position += delta;
 }
+/// Decreases size of the rect while keeping it in the center
 pub fn shrinkBy (self : *Rectangle, by : Vector) void {
     assert(@reduce(.And, by <= self.size));
     assert(@reduce(.And, by >= vector_zero));
@@ -30,6 +31,7 @@ pub fn shrinkBy (self : *Rectangle, by : Vector) void {
     self.position += by * vector_half;
     self.size -= by;
 }
+/// Decreases size of the rect while keeping it in the center
 pub fn shrinkTo (self : *Rectangle, to : Vector) void {
     assert(@reduce(.And, to >= vector_zero));
     assert(@reduce(.And, to <= self.size));
@@ -38,6 +40,7 @@ pub fn shrinkTo (self : *Rectangle, to : Vector) void {
     self.size = to;
     self.position += diff * vector_half;
 }
+/// Decreases size of the rect while keeping it in the center
 pub fn shrinkByPercent (self : *Rectangle, percent : Vector) void {
     assert(@reduce(.And, percent >= vector_zero ));
     assert(@reduce(.And, percent <= vector_one));
@@ -46,6 +49,7 @@ pub fn shrinkByPercent (self : *Rectangle, percent : Vector) void {
     self.position += p * vector_half;
     self.size -= p;
 }
+/// Decreases size of the rect while keeping it in the center
 pub fn shrinkToPercent (self : *Rectangle, percent : Vector) void {
     assert(percent > 0.0 and percent <= 1.0);
 
@@ -54,6 +58,7 @@ pub fn shrinkToPercent (self : *Rectangle, percent : Vector) void {
     self.size = p;
     self.position += diff * vector_half;
 }
+/// Decreases size of the rect while keeping it in the center
 pub fn shrinkWidthTo (self : *Rectangle, width : f32) void {
     assert (width <= self.size[0]);
 
@@ -61,12 +66,14 @@ pub fn shrinkWidthTo (self : *Rectangle, width : f32) void {
     self.size[0] = width;
     self.position[0] += diff * 0.5;
 }
+/// Decreases size of the rect while keeping it in the center
 pub fn shrinkWidthBy (self : *Rectangle, width : f32) void {
     assert(width <= self.size[0]);
 
     self.size[0] -= width;
     self.position[0] += width * 0.5;
 }
+/// Decreases size of the rect while keeping it in the center
 pub fn shrinkHeightTo (self : *Rectangle, height : f32) void {
     assert(self.size[1] >= height);
 
@@ -74,24 +81,27 @@ pub fn shrinkHeightTo (self : *Rectangle, height : f32) void {
     self.size[1] = height;
     self.position[1] += diff * 0.5;
 }
+/// Decreases size of the rect while keeping it in the center
 pub fn shrinkHeightBy (self : *Rectangle, height : f32) void {
     assert(height <= self.size[1]);
 
     self.size[1] -= height;
     self.position += height * 0.5;
 }
-pub fn splitHorizontal (self : Rectangle, comptime count : usize, spacing : f32) [count]Rectangle {
+
+/// Splits the rect into equally sized rectangles with optional spacing between them
+pub fn splitHorizontal (self : Rectangle, comptime rows : usize, spacing : f32) [rows]Rectangle {
     assert(spacing >= 0.0);
 
-    if (count < 2) @compileError("Can't split rectangle in less than 2 parts");
+    if (rows < 2) @compileError("Can't split rectangle in less than 2 parts");
 
-    const height = (self.size[1] - (spacing * (count - 1)) ) / count;
+    const height = (self.size[1] - (spacing * (rows - 1)) ) / rows;
 
-    var result : [count]Rectangle = undefined;
+    var result : [rows]Rectangle = undefined;
     const size = Vector { self.size[0], height };
     const step = height + spacing;
 
-    for (0..count) |i| {
+    for (0..rows) |i| {
         result[i] = .{
             .size = size,
             .position = Vector { self.position[0], self.position[1] + @as(f32, @floatFromInt(i)) * step }
@@ -100,23 +110,25 @@ pub fn splitHorizontal (self : Rectangle, comptime count : usize, spacing : f32)
 
     return result;
 }
-pub fn splitHorizontalPercent (self : Rectangle, comptime count : usize, spacing : f32) [count]Rectangle {
+/// Splits the rect into equally sized rectangles with optional spacing between them
+pub fn splitHorizontalPercent (self : Rectangle, comptime rows : usize, spacing : f32) [rows]Rectangle {
     assert(spacing > 0.0 and spacing <= 1.0);
     const spc = spacing * self.size[1];
-    return self.splitHorizontal(count, spc);
+    return self.splitHorizontal(rows, spc);
 }
-pub fn splitVertical (self : Rectangle, comptime count : usize, spacing : f32) [count]Rectangle {
+/// Splits the rect into equally sized rectangles with optional spacing between them
+pub fn splitVertical (self : Rectangle, comptime columns : usize, spacing : f32) [columns]Rectangle {
     assert(spacing >= 0.0);
 
-    if (count < 2) @compileError("Can't split rectangle in less than 2 parts");
+    if (columns < 2) @compileError("Can't split rectangle in less than 2 parts");
 
-    const width = (self.size[0] - (spacing * (count - 1)) ) / count;
+    const width = (self.size[0] - (spacing * (columns - 1)) ) / columns;
 
-    var result : [count]Rectangle = undefined;
+    var result : [columns]Rectangle = undefined;
     const size = Vector { width, self.size[1] };
     const step = width + spacing;
 
-    for (0..count) |i| {
+    for (0..columns) |i| {
         result[i] = .{
             .size = size,
             .position = Vector { self.position[0] + @as(f32, @floatFromInt(i)) * step , self.position[1] }
@@ -125,12 +137,14 @@ pub fn splitVertical (self : Rectangle, comptime count : usize, spacing : f32) [
 
     return result;
 }
-pub fn splitVerticalPercent (self : Rectangle, comptime count : usize, spacing : f32) [count]Rectangle {
+/// Splits the rect into equally sized rectangles with optional spacing between them
+pub fn splitVerticalPercent (self : Rectangle, comptime columns : usize, spacing : f32) [columns]Rectangle {
     assert(spacing > 0.0 and spacing <= 1.0);
     const spc = spacing * self.size[0];
-    return self.splitVertical(count, spc);
+    return self.splitVertical(columns, spc);
 }
-/// Cuts off top or bottom from the rect dependin on whatever the amount is positive or negative
+
+/// Cuts off top or bottom from the rect depending on whatever the amount is positive or negative
 /// Spacing is always cut off the calling rect
 pub fn cutHorizontal (self : *Rectangle, amount : f32, spacing : f32) Rectangle {
     const actual_amount = if (amount < 0) -amount else amount;
@@ -187,6 +201,8 @@ pub fn cutVerticalPercent (self : *Rectangle, amount : f32, spacing : f32) Recta
     return self.cutVertical(actual_amount, actual_spacing);
 }
 
+/// Moves the rect so all of its area is within borders.
+/// If rect is larger than borders, it will be shrinked
 pub fn clampInsideOf (self : *Rectangle, borders : Rectangle) void {
     const too_large = self.size > borders.size;
     if (@reduce(.Or, too_large)) {
