@@ -23,6 +23,7 @@ pub fn contains (self : Rectangle, point : Vector) bool {
 pub fn move (self : *Rectangle, delta : Vector) void {
     self.position += delta;
 }
+
 /// Decreases size of the rect while keeping it in the center
 pub fn shrinkBy (self : *Rectangle, by : Vector) void {
     assert(@reduce(.And, by <= self.size));
@@ -87,6 +88,72 @@ pub fn shrinkHeightBy (self : *Rectangle, height : f32) void {
 
     self.size[1] -= height;
     self.position += height * 0.5;
+}
+
+/// Decreases size of the rect towards the bottom right corner
+pub fn squishBy (self : *Rectangle, by : Vector) void {
+    assert(@reduce(.And, by <= self.size));
+    assert(@reduce(.And, by >= vector_zero));
+
+    self.position += by;
+    self.size -= by;
+}
+/// Decreases size of the rect towards the bottom right corner
+pub fn squishTo (self : *Rectangle, to : Vector) void {
+    assert(@reduce(.And, to >= vector_zero));
+    assert(@reduce(.And, to <= self.size));
+
+    const diff = self.size - to;
+    self.size = to;
+    self.position += diff;
+}
+/// Decreases size of the rect towards the bottom right corner
+pub fn squishByPercent (self : *Rectangle, percent : Vector) void {
+    assert(@reduce(.And, percent >= vector_zero ));
+    assert(@reduce(.And, percent <= vector_one));
+
+    const p = self.size * percent;
+    self.position += p;
+    self.size -= p;
+}
+/// Decreases size of the rect towards the bottom right corner
+pub fn squishToPercent (self : *Rectangle, percent : Vector) void {
+    assert(percent > 0.0 and percent <= 1.0);
+
+    const p = self.size * percent;
+    const diff = self.size - p;
+    self.size = p;
+    self.position += diff;
+}
+/// Decreases size of the rect towards the right side
+pub fn squishWidthTo (self : *Rectangle, width : f32) void {
+    assert (width <= self.size[0]);
+
+    const diff = self.size[0] - width;
+    self.size[0] = width;
+    self.position[0] += diff;
+}
+/// Decreases size of the rect towards the right side
+pub fn squishWidthBy (self : *Rectangle, width : f32) void {
+    assert(width <= self.size[0]);
+
+    self.size[0] -= width;
+    self.position[0] += width;
+}
+/// Decreases size of the rect towards the bottom
+pub fn squishHeightTo (self : *Rectangle, height : f32) void {
+    assert(self.size[1] >= height);
+
+    const diff = self.size[1] - height;
+    self.size[1] = height;
+    self.position[1] += diff;
+}
+/// Decreases size of the rect towards the bottom
+pub fn squishHeightBy (self : *Rectangle, height : f32) void {
+    assert(height <= self.size[1]);
+
+    self.size[1] -= height;
+    self.position += height;
 }
 
 /// Splits the rect into equally sized rectangles with optional spacing between them
