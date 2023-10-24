@@ -118,7 +118,6 @@ pub const TextInput = struct {
                     if (diff == 0) {
                         return;
                     }
-                    std.debug.print("Len: {d}", .{diff});
                     look.cursor -= diff;
 
                     const len = look.text.len - diff;
