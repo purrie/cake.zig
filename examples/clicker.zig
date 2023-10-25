@@ -514,7 +514,7 @@ const WarningWindow = struct {
     const Ui = cake.FixedUi(
         .{
             .WidgetTheme = SingleTheme,
-            .UiColorPalette = cake.FixedPallete(SingleTheme),
+            .UiColorPalette = cake.FixedPalette(SingleTheme),
             .Widget = cake.widgets.TextDisplay,
         },
         1
