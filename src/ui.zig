@@ -63,6 +63,8 @@ pub fn FixedUi (
         pub const UiContext = context;
         pub const LayoutContext = struct {
             ui : *Ui,
+            focus : ?context.WidgetIdentity,
+            active : ?context.WidgetIdentity,
 
             pub fn addWidget (
                 self : LayoutContext,
@@ -79,6 +81,16 @@ pub fn FixedUi (
                     .meta = config,
                     .area = area,
                 };
+                if (self.focus) |f| {
+                    if (config.identity == f) {
+                        self.ui.focus = &self.ui.widgets[self.ui.len];
+                    }
+                }
+                if (self.active) |a| {
+                    if (config.identity == a) {
+                        self.ui.active = &self.ui.widgets[self.ui.len];
+                    }
+                }
                 self.ui.len += 1;
             }
             pub fn addPlainWidget (
@@ -97,14 +109,24 @@ pub fn FixedUi (
                 self : LayoutContext,
                 area : Rectangle,
                 widget : context.Widget,
-                meta : Widget.Metadata,
+                config : Widget.Metadata,
             ) ! void {
                 if (self.ui.len >= size) return error.OutOfMemory;
                 self.ui.widgets[self.ui.len] = Widget{
                     .look = widget,
                     .area = area,
-                    .meta = meta,
+                    .meta = config,
                 };
+                if (self.focus) |f| {
+                    if (config.identity == f) {
+                        self.ui.focus = &self.ui.widgets[self.ui.len];
+                    }
+                }
+                if (self.active) |a| {
+                    if (config.identity == a) {
+                        self.ui.active = &self.ui.widgets[self.ui.len];
+                    }
+                }
                 self.ui.len += 1;
             }
             pub fn addBehavingWidget (
@@ -151,9 +173,13 @@ pub fn FixedUi (
         pub fn layout (self : *Ui) LayoutContext {
             self.len = 0;
             self.hover = null;
-            self.focus = null;
-            self.active = null;
-            return LayoutContext{ .ui = self };
+            defer self.focus = null;
+            defer self.active = null;
+            return LayoutContext{
+                .ui = self,
+                .focus = if (self.focus) |f| f.meta.identity else null,
+                .active = if (self.active) |a| a.meta.identity else null,
+            };
         }
         pub fn setPointerPosition (self : *Ui, position : ?Vector) void {
             self.pointer = position;
