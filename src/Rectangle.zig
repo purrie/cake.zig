@@ -195,7 +195,7 @@ pub fn squishHeightBy (self : *Rectangle, height : f32) void {
     assert(height <= self.size[1]);
 
     self.size[1] -= height;
-    self.position += height;
+    self.position[1] += height;
 }
 /// Decreases size of the rect towards the bottom
 pub fn squishHeightToPercent (self : *Rectangle, height : f32) void {
