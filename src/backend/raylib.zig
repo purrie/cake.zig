@@ -7,6 +7,7 @@ const Color     = cake.Color;
 const Vector  = cake.Vector;
 
 pub const Font = ray.Font;
+
 pub var default_font : ?ray.Font = null;
 
 pub const view = struct {
