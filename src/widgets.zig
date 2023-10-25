@@ -65,7 +65,6 @@ pub const TextDisplay = struct {
 /// Draws left side aligned text with background. It's designed to work with TextInput behavior.
 pub const TextInput = struct {
     text : []u8,
-    capacity : usize,
     cursor : usize = 0,
 
     size : f32 = 20,

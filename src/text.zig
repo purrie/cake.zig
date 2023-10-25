@@ -5,16 +5,21 @@ const KeyboardEvent = types.KeyboardEvent;
 
 /// Deletes a character before cursor point by overriding it with following bytes
 /// returns new size of the text buffer
-pub fn deleteCharBeforeUnicode (text : []u8, cursor : usize) usize {
-    if (cursor < 1) return text.len;
-    if (text.len == 0) return text.len;
+pub fn deleteCharBeforeUnicode (text : []u8, cursor : usize) ?struct { deleted : u21, new_size : usize, size_diff : usize } {
+    if (cursor < 1) return null;
+    if (text.len == 0) return null;
     const pointer = if (cursor > text.len) text.len else cursor;
     var move = pointer;
 
     moveCursorCharBackward(text, &move);
-    if (move == pointer) return 0;
+    if (move == pointer) return null;
+    const result = .{
+        .deleted = std.unicode.utf8Decode(text[move..pointer]) catch return null,
+        .size_diff = pointer - move,
+        .new_size = text.len - (pointer - move),
+    };
     std.mem.copyForwards(u8, text[move..], text[pointer..]);
-    return pointer - move;
+    return result;
 }
 
 /// Inputs the unicode character into the string at the cursor.
