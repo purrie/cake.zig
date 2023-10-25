@@ -3,19 +3,36 @@ const cake = @import("cake");
 const ray = @cImport(@cInclude("raylib.h"));
 
 const LoginForm = struct {
-    const WidgetAction = enum {
+    const WidgetAction = union (enum) {
         accept,
         cancel,
+        login_change : struct { size : usize, cursor : usize },
+        password_change : struct { size : usize, cursor : usize },
+
+        pub fn loginChange (text : []const u8, cursor : usize, char : u21) ?WidgetAction {
+            _ = char;
+            return .{ .login_change = .{ .size = text.len, .cursor = cursor } };
+        }
+        pub fn passwordChange (text : []const u8, cursor : usize, char : u21) ?WidgetAction {
+            _ = char;
+            return .{ .password_change = .{ .size = text.len, .cursor = cursor } };
+        }
     };
     const FormResult = enum {
         accept,
+        cancel,
         wrong_login,
         wrong_password,
+    };
+    const Identity = enum {
+        login,
+        password,
     };
     const Form = cake.FixedUi(
         .{
             .UiEvent = WidgetAction,
             .Behavior = cake.behaviors.BuiltinBehaviors(WidgetAction),
+            .WidgetIdentity = Identity,
         },
         12
     );
@@ -25,6 +42,11 @@ const LoginForm = struct {
 
     interface : Form = .{ .theme = cake.theme_light },
     area : cake.Rectangle,
+
+    cursor : usize = 0,
+    login_len : usize = 0,
+    password_len : usize = 0,
+
     login_buffer : [9]u8 = [_]u8{0} ** 9,
     password_buffer : [9]u8 = [_]u8{0} ** 9,
 
@@ -32,6 +54,7 @@ const LoginForm = struct {
     const cancel_label = "Cancel";
     const login_label = "Login:";
     const password_label = "Password:";
+    const invalid_user_label = "User not found!";
 
     pub fn uiLayout (self : *@This()) ! void {
         const ui = self.interface.layout();
@@ -43,7 +66,7 @@ const LoginForm = struct {
         area.shrinkBy(@splat(8));
         var button_line = area.cutHorizontalPercent(-0.2, 0.1);
 
-        _ = area.cutHorizontalPercent(0.2, 0);
+        area.squishHeightByPercent(0.2);
         var areas = area.splitHorizontalPercent(2, 0.1);
         areas[0].shrinkTo(.{areas[0].size[0] - margin, font_size + margin});
 
@@ -51,32 +74,41 @@ const LoginForm = struct {
             areas[0],
             .{
                 .text_input = .{
-                    .text = @constCast(self.login_buffer[0..0 :0]),
+                    .text = self.login_buffer[0..self.login_len],
+                    .cursor = self.cursor,
                     .size = font_size,
-                    .capacity = 9,
                 }
             },
-            .{ .text_input = .{} },
-            .{ .theme = .highlight }
+            .{ .text_input = .{ .capacity = 9, .onInput = &WidgetAction.loginChange, .onDelete = &WidgetAction.loginChange } },
+            .{ .theme = .highlight, .identity = .login }
         );
         areas[0].move(.{ 0, -(margin + font_size) });
         try ui.addPlainWidget(
             areas[0],
             .{ .label = .{ .text = login_label[0..], .size = font_size } }
         );
+        if (self.login_len > 0 and std.mem.eql(u8, self.login_buffer[0..self.login_len], "cake") == false) {
+            const warn_width = ui.measureText(invalid_user_label, font_size);
+            areas[0].squishWidthTo(warn_width);
+            try ui.addRichWidget(
+                areas[0],
+                .{ .label = .{ .text = invalid_user_label[0..], .size = font_size  }},
+                .{ .theme = .danger }
+            );
+        }
 
         areas[1].shrinkTo(.{ areas[1].size[0] - margin, font_size + margin });
         try ui.addWidget(
             areas[1],
             .{
                 .text_input = .{
-                    .text = @constCast(self.password_buffer[0..0 :0]),
+                    .text = self.password_buffer[0..self.password_len],
+                    .cursor = self.cursor,
                     .size = font_size,
-                    .capacity = 9,
                 }
             },
-            .{ .text_input = .{} },
-            .{ .theme = .highlight }
+            .{ .text_input = .{ .capacity = 9, .onInput = &WidgetAction.passwordChange, .onDelete = &WidgetAction.passwordChange } },
+            .{ .theme = .highlight, .identity = .password }
         );
         areas[1].move(.{ 0, -(margin + font_size) });
         try ui.addPlainWidget(
@@ -103,10 +135,8 @@ const LoginForm = struct {
     }
 
     pub fn validateLogin (self : *@This()) FormResult {
-        const login_z : [*:0]const u8 = self.login_buffer[0..8 :0];
-        const pass_z : [*:0]const u8 = self.password_buffer[0..8 :0];
-        const login = std.mem.span(login_z);
-        const pass = std.mem.span(pass_z);
+        const login = self.login_buffer[0..self.login_len];
+        const pass = self.password_buffer[0..self.password_len];
         if (std.mem.eql(u8, login, "cake")) {
             if (std.mem.eql(u8, pass, "yummy")) {
                 return .accept;
@@ -120,7 +150,7 @@ const LoginForm = struct {
         }
     }
 
-    pub fn update (self : *@This()) ! ?WidgetAction {
+    pub fn update (self : *@This()) ! ?FormResult {
         const cursor = ray.GetMousePosition();
         self.interface.setPointerPosition(@bitCast(cursor));
 
@@ -133,7 +163,22 @@ const LoginForm = struct {
         if (cake.backend.input.keyboardEvent()) |ev| {
             try self.interface.sendKeyboardEvent(ev);
         }
-        return self.interface.popEvent();
+        if (self.interface.popEvent()) |ev| {
+            switch (ev) {
+                .login_change => |diff| {
+                    self.login_len = diff.size;
+                    self.cursor = diff.cursor;
+                    try self.uiLayout();
+                },
+                .password_change => |diff| {
+                    self.password_len = diff.size;
+                    self.cursor = diff.cursor;
+                },
+                .accept => return self.validateLogin(),
+                .cancel => return .cancel,
+            }
+        }
+        return null;
     }
 };
 
@@ -199,18 +244,16 @@ pub fn main() !void {
         else {
             if (try ui.update()) |ev| switch (ev) {
                 .accept => {
-                    switch (ui.validateLogin()) {
-                        .accept => {
-                            try result_ui.setText("Login Successful!");
-                            login_accepted = true;
-                        },
-                        .wrong_login => {
-                            try hint.setText("Incorrect Login, type: cake");
-                        },
-                        .wrong_password => {
-                            try hint.setText("Incorrect Password, type: yummy");
-                        },
-                    }
+                    try result_ui.setText("Login Successful!");
+                    login_accepted = true;
+                    countdown = 3;
+                },
+                .wrong_login => {
+                    try hint.setText("Incorrect Login, type: cake");
+                    countdown = 3;
+                },
+                .wrong_password => {
+                    try hint.setText("Incorrect Password, type: yummy");
                     countdown = 3;
                 },
                 .cancel => {
