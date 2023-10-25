@@ -338,6 +338,13 @@ pub fn FixedUi (
         pub fn getActiveWidget (self : *Ui) ?*Widget {
             return self.active;
         }
+        pub fn getWidget (self : *Ui, id : context.WidgetIdentity) ?*Widget {
+            for (self.widgets[0..self.len]) |*w| {
+                if (w.meta.identity == id)
+                    return w;
+            }
+            return null;
+        }
         pub fn isFocused (self : *Ui, behavior : *anyopaque) bool {
             const focus = self.focus orelse return false;
             if (focus.behavior == null) return false;
