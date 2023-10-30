@@ -77,9 +77,10 @@ pub fn addCake (
         .{
             .source_file = cake.root_src.?,
             .dependencies = &.{
-                .{ .name = "build_options", .module = options }
+                .{ .name = "cake_options", .module = options }
             }
-        });
+        }
+    );
     return cake;
 }
 

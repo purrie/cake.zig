@@ -1,4 +1,4 @@
-const options = @import("build_options");
+const options = @import("cake_options");
 
 pub const Backend = enum {
     raylib,
@@ -15,6 +15,7 @@ pub const ui         = @import("ui.zig");
 pub const style      = @import("style.zig");
 pub const widgets    = @import("widgets.zig");
 pub const view       = @import("viewers.zig");
+pub const interface  = @import("interface.zig");
 
 pub const contains   = @import("data.zig");
 pub const acts_like  = @import("behaviors.zig");
@@ -37,9 +38,11 @@ pub const Color       = types.Color;
 pub const EventResult      = types.EventResult;
 pub const PointerEvent     = types.PointerEvent;
 pub const PointerButton    = types.PointerButton;
+pub const PointerContext   = types.PointerContext;
 pub const KeyboardEvent    = types.KeyboardEvent;
 pub const KeyboardModifier = types.KeyboardModifier;
 pub const KeyboardContext  = types.KeyboardContext;
+pub const BehaviorContext  = types.BehaviorContext;
 
 pub const theme_light = style.light_theme;
 pub const theme_dark  = style.dark_theme;
