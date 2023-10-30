@@ -20,7 +20,7 @@ pub const contains   = @import("data.zig");
 pub const acts_like  = @import("behaviors.zig");
 pub const looks_like = view.viewers(backend);
 
-pub const FixedUi = ui.FixedUi;
+pub const FixedUi = ui.UserInterface(backend).FixedUi;
 pub const Context = ui.UIContext;
 
 pub const FixedPalette   = style.FixedPalette;
