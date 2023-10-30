@@ -10,61 +10,6 @@ pub const Font = ray.Font;
 
 pub var default_font : ?ray.Font = null;
 
-pub const view = struct {
-    pub fn windowArea () Rectangle {
-        return .{ .size = .{ windowWidth(), windowHeight() } };
-    }
-    pub fn windowWidth () f32 {
-        return @floatFromInt(ray.GetScreenWidth());
-    }
-    pub fn windowHeight () f32 {
-        return @floatFromInt(ray.GetScreenHeight());
-    }
-    pub fn measureText (text : []const u8, font_size : f32) f32 {
-        const font = default_font orelse ray.GetFontDefault();
-        const result = measureText2D(text, font_size, font_size / 10.0, font);
-        return result[0];
-    }
-    pub fn measureText2D (text : []const u8, font_size : f32, spacing : f32, font : ray.Font) Vector {
-        var size = Vector{0, 0};
-        var scale = font_size / @as(f32, @floatFromInt(font.baseSize));
-        var width_accumulator : f32 = 0;
-        var spacings : f32 = 0;
-        var spacings_accumulator : f32 = 0;
-
-        var utf8 = std.unicode.Utf8View.init(text) catch unreachable;
-        var iter = utf8.iterator();
-
-        while (iter.nextCodepoint()) |codepoint| {
-            const cpoint : c_int = @intCast(codepoint);
-            const index : usize = @intCast(ray.GetGlyphIndex(font, cpoint));
-
-            switch (cpoint) {
-                '\n' => {
-                    if (width_accumulator > size[0]) size[0] = width_accumulator;
-                    if (spacings_accumulator > spacings) spacings = spacings_accumulator;
-                    width_accumulator = 0;
-                    size[1] += font_size;
-                },
-                else => {
-                    const advance = if (font.glyphs[index].advanceX != 0)
-                        @as(f32, @floatFromInt(font.glyphs[index].advanceX))
-                    else
-                        font.recs[index].width + @as(f32, @floatFromInt(font.glyphs[index].offsetX));
-                    width_accumulator += advance;
-                    spacings_accumulator += 1;
-                }
-            }
-        }
-        if (width_accumulator > size[0]) size[0] = width_accumulator;
-        if (spacings_accumulator > spacings) spacings = spacings_accumulator;
-
-        size *= @splat(scale);
-        size[0] += spacings * spacing;
-        return size;
-    }
-};
-
 pub const input = struct {
     pub fn keyboardEvent () ?cake.KeyboardEvent {
         const char = ray.GetCharPressed();
@@ -72,7 +17,7 @@ pub const input = struct {
         if (char == 0 and key == 0) return null;
 
         return .{
-            .character = @intCast(char),
+            .character = if (char > 0) @truncate(@as(u32, @intCast(char))) else null,
             .keycode = @intCast(key),
             .modifiers = .{
                 .control_left  = ray.IsKeyDown(ray.KEY_LEFT_CONTROL),
@@ -156,4 +101,57 @@ pub fn drawText (text : []const u8, position : Vector, size : f32, color : Color
 
         text_offset_x += advance * scale_factor + spacing;
     }
+}
+
+pub fn windowArea () Rectangle {
+    return .{ .size = .{ windowWidth(), windowHeight() } };
+}
+pub fn windowWidth () f32 {
+    return @floatFromInt(ray.GetScreenWidth());
+}
+pub fn windowHeight () f32 {
+    return @floatFromInt(ray.GetScreenHeight());
+}
+pub fn measureText (text : []const u8, font_size : f32) f32 {
+    const font = default_font orelse ray.GetFontDefault();
+    const result = measureText2D(text, font_size, font_size / 10.0, font);
+    return result[0];
+}
+pub fn measureText2D (text : []const u8, font_size : f32, spacing : f32, font : ray.Font) Vector {
+    var size = Vector{0, 0};
+    var scale = font_size / @as(f32, @floatFromInt(font.baseSize));
+    var width_accumulator : f32 = 0;
+    var spacings : f32 = 0;
+    var spacings_accumulator : f32 = 0;
+
+    var utf8 = std.unicode.Utf8View.init(text) catch unreachable;
+    var iter = utf8.iterator();
+
+    while (iter.nextCodepoint()) |codepoint| {
+        const cpoint : c_int = @intCast(codepoint);
+        const index : usize = @intCast(ray.GetGlyphIndex(font, cpoint));
+
+        switch (cpoint) {
+            '\n' => {
+                if (width_accumulator > size[0]) size[0] = width_accumulator;
+                if (spacings_accumulator > spacings) spacings = spacings_accumulator;
+                width_accumulator = 0;
+                size[1] += font_size;
+            },
+            else => {
+                const advance = if (font.glyphs[index].advanceX != 0)
+                    @as(f32, @floatFromInt(font.glyphs[index].advanceX))
+                else
+                    font.recs[index].width + @as(f32, @floatFromInt(font.glyphs[index].offsetX));
+                width_accumulator += advance;
+                spacings_accumulator += 1;
+            }
+        }
+    }
+    if (width_accumulator > size[0]) size[0] = width_accumulator;
+    if (spacings_accumulator > spacings) spacings = spacings_accumulator;
+
+    size *= @splat(scale);
+    size[0] += spacings * spacing;
+    return size;
 }

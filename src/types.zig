@@ -1,4 +1,5 @@
 const std = @import("std");
+const interface = @import("interface.zig");
 
 const floatEql = std.math.approxEqAbs;
 const floatEpsilon = std.math.floatEps;
@@ -10,23 +11,26 @@ pub const vector_zero = Vector { 0.0, 0.0 };
 pub const vector_one = Vector { 1.0, 1.0 };
 
 /// Responsible for describing which states are active in a widget
-pub const DrawState = packed struct {
-    normal : bool = true,
-    hover : bool = true,
-    focus : bool = true,
-    active : bool = true,
+pub const WidgetState = packed struct {
+    normal   : bool = true,
+    inactive : bool = false,
+    hover    : bool = true,
+    focus    : bool = true,
+    active   : bool = true,
 
-    pub fn isMismatch (self : DrawState, other : DrawState) bool {
-        const me : u4 = @bitCast(self);
-        const you : u4 = @bitCast(other);
+    pub fn isMismatch (self : WidgetState, other : WidgetState) bool {
+        const me : u8 = @bitCast(self);
+        const you : u8 = @bitCast(other);
         return me & you == 0;
     }
 
-    pub fn selectColor (self : DrawState, state : StateColor) Color {
+    pub fn selectColor (self : WidgetState, state : StateColor) Color {
+        if (self.inactive) return state.inactive;
         if (self.active) return state.press;
         if (self.hover) return state.hover;
         if (self.focus) return state.focus;
-        return state.normal;
+        if (self.normal) return state.normal;
+        return Color.hex(0x0);
     }
 };
 
@@ -38,7 +42,7 @@ pub const Color = packed struct {
     b : u8,
     a : u8 = 255,
 
-    pub inline fn hex(code : u32) Color {
+    pub fn hex(code : u32) Color {
         return .{
             .r = @truncate(code >> 24),
             .g = @truncate(code >> 16),
@@ -46,41 +50,60 @@ pub const Color = packed struct {
             .a = @truncate(code),
         };
     }
-    pub inline fn lightness (self : Color) u8 {
+    pub fn lightness (self : Color) u8 {
         return @max(self.r, @max(self.g, self.b));
     }
-    pub inline fn isLight (self : Color) bool {
+    pub fn isBlank (self : Color) bool {
+        return self.a == 0;
+    }
+    pub fn isLight (self : Color) bool {
         return self.lightness() >= 128;
     }
-    pub inline fn isLightnessEdge (self : Color) bool {
+    pub fn isLightnessEdge (self : Color) bool {
         const light = self.lightness();
         return light >= 194 or light <= 64;
     }
-    pub inline fn flip (self : Color) Color {
+    pub fn flip (self : Color) Color {
         const vcolor = @as(@Vector(4, u8), @bitCast(self));
         const reverse : @Vector(4, u8) = @splat(255);
         const result = reverse - vcolor;
         return @bitCast(@shuffle(u8, result, vcolor, @Vector(4, i32) { 0, 1, 2, -4 }));
     }
-    pub inline fn rollUp (self : Color, amount : u8) Color {
+    pub fn rollUp (self : Color, amount : u8) Color {
         const diff = ColorVec { amount, amount, amount, 0 };
         const vcolor : ColorVec = @bitCast(self);
         return @bitCast(vcolor +% diff);
     }
-    pub inline fn rollDown (self : Color, amount : u8) Color {
+    pub fn rollDown (self : Color, amount : u8) Color {
         const diff = ColorVec { amount, amount, amount, 0 };
         const vcolor : ColorVec = @bitCast(self);
         return @bitCast(vcolor -% diff);
     }
-    pub inline fn lighten (self : Color, amount : u8) Color {
+    pub fn lighten (self : Color, amount : u8) Color {
         const diff = ColorVec { amount, amount, amount, 0 };
         const vcolor : ColorVec = @bitCast(self);
         return @bitCast(vcolor +| diff);
     }
-    pub inline fn darken (self : Color, amount : u8) Color {
+    pub fn darken (self : Color, amount : u8) Color {
         const diff = ColorVec { amount, amount, amount, 0 };
         const vcolor : ColorVec = @bitCast(self);
         return @bitCast(vcolor -| diff);
+    }
+    pub fn desaturate (self : Color, amount : u8) Color {
+        const max : u8 = @max(self.r, @max(self.g, self.b));
+        const min : u8 = @min(self.r, @min(self.g, self.b));
+        const diff = @min(amount, max - min) / @as(u8, 2);
+        var result = self;
+
+        if (result.r == max) result.r -= diff
+        else if (result.g == max) result.g -= diff
+        else result.b -= diff;
+
+        if (result.b == min) result.b += diff
+        else if (result.g == min) result.g += diff
+        else result.r += diff;
+
+        return result;
     }
 
     pub const black  = Color.hex( 0x0f0f0fff );
@@ -96,29 +119,32 @@ pub const Color = packed struct {
 
 /// Contains colors for specific widget states
 pub const StateColor = struct {
-    normal : Color,
-    hover : Color,
-    focus : Color,
-    press : Color,
+    normal   : Color,
+    inactive : Color,
+    hover    : Color,
+    focus    : Color,
+    press    : Color,
 
     pub fn shadeLighter (color : Color) StateColor {
         return .{
             .normal = color,
-            .hover = .{ .r = color.r +| 8,  .g = color.g +| 8,  .b = color.b +| 8,  .a = color.a },
-            .focus = .{ .r = color.r +| 16, .g = color.g +| 16, .b = color.b +| 16, .a = color.a },
-            .press = .{ .r = color.r -| 8,  .g = color.g -| 8,  .b = color.b -| 8,  .a = color.a },
+            .inactive = color.darken(4).desaturate(8),
+            .hover = color.lighten(8),
+            .focus = color.lighten(16),
+            .press = color.darken(8),
         };
     }
     pub fn shadeDarker (color : Color) StateColor {
         return .{
             .normal = color,
-            .hover = .{ .r = color.r -| 8,  .g = color.g -| 8,  .b = color.b -| 8,  .a = color.a },
-            .focus = .{ .r = color.r -| 16, .g = color.g -| 16, .b = color.b -| 16, .a = color.a },
-            .press = .{ .r = color.r +| 8,  .g = color.g +| 8,  .b = color.b +| 8,  .a = color.a },
+            .inactive = color.lighten(4).desaturate(8),
+            .hover = color.darken(8),
+            .focus = color.darken(16),
+            .press = color.lighten(8),
         };
     }
     pub fn shadeUniform (color : Color) StateColor {
-        return .{ .normal = color, .hover = color, .focus = color, .press = color, };
+        return .{ .normal = color, .inactive = color, .hover = color, .focus = color, .press = color };
     }
 };
 
@@ -204,6 +230,12 @@ pub const EventResult = enum {
     ignored,
 };
 
+pub const WidgetInteractionState = enum {
+    normal,
+    inactive,
+    hidden,
+};
+
 pub const KeyboardModifier = packed struct {
     control_left  : bool = false,
     control_right : bool = false,
@@ -229,7 +261,7 @@ pub const KeyboardModifier = packed struct {
 };
 /// Keyboard event description, use backend to create the full description
 pub const KeyboardEvent = struct {
-    character : ?u32 = null,
+    character : ?u21 = null,
     keycode   : ?u32 = null,
     modifiers : KeyboardModifier = .{},
 };
@@ -237,25 +269,31 @@ pub const KeyboardEvent = struct {
 /// Data passed to widgets on drawing events
 pub const DrawingContext = struct {
     area     : Rectangle,
-    position : ?Vector,
+    pointer  : ?Vector,
     colors   : ColorScheme,
-    state    : DrawState,
+    state    : WidgetState,
 };
 /// Data passed to widgets on input events
 pub const BehaviorContext = struct {
-    area     : Rectangle,
-    position : ?Vector,
-    pointer  : ?PointerEvent,
-    keyboard : ?KeyboardEvent,
+    area : Rectangle,
+    pointer_position : Vector,
+    pointer_event    : ?PointerEvent,
+    keyboard_event   : ?KeyboardEvent,
+    state : WidgetState,
+    ui    : interface.Behavior,
 };
 /// Data passed to widgets on pointer events
 pub const PointerContext = struct {
-    area     : Rectangle,
-    position : Vector,
-    pointer  : PointerEvent,
+    area    : Rectangle,
+    pointer : Vector,
+    event   : PointerEvent,
+    state   : WidgetState,
+    ui      : interface.Behavior,
 };
 /// Data passed to widgets on keyboard events
 pub const KeyboardContext = struct {
-    area     : Rectangle,
-    keyboard : KeyboardEvent,
+    area  : Rectangle,
+    event : KeyboardEvent,
+    state : WidgetState,
+    ui    : interface.Behavior,
 };

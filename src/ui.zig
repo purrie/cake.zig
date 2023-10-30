@@ -4,36 +4,33 @@ const types = @import("types.zig");
 const style = @import("style.zig");
 const widgets = cake.widgets;
 const log = std.log.scoped(.cake);
+const interface = @import("interface.zig");
 
 const Rectangle = @import("Rectangle.zig");
 const Size = types.Size;
 const Vector = types.Vector;
-const DrawState = types.DrawState;
+const DrawState = types.WidgetState;
 const ColorScheme = types.ColorScheme;
 const KeyboardEvent = types.KeyboardEvent;
 
-pub const Context = struct {
-    Widget   : type = widgets.BuiltinWidgets,
-    Behavior : type = void,
+pub const UIContext = struct {
+    Theme        : type = style.DefaultTheme,
+    ColorPalette : type = style.DefaultPalette,
 
-    WidgetTheme    : type = style.DefaultTheme,
-    UiColorPalette : type = style.DefaultPalette,
-
-    WidgetIdentity : type = void,
-    UiEvent        : type = void,
-    UserData       : type = void,
+    Identity     : type = void,
+    Event        : type = void,
 };
 
 pub fn FixedUi (
-    comptime context : Context,
+    comptime context : UIContext,
     comptime size : usize,
 ) type {
-    const default_widget_theme = if (@hasDecl(context.WidgetTheme, "default"))
-        context.WidgetTheme.default()
+    const default_widget_theme = if (@hasDecl(context.Theme, "default"))
+        context.Theme.default()
     else
-        switch (@typeInfo(context.WidgetTheme)) {
+        switch (@typeInfo(context.Theme)) {
             .Enum => |en| ret: {
-                break :ret @as(context.WidgetTheme, @enumFromInt(en.fields[0].value));
+                break :ret @as(context.Theme, @enumFromInt(en.fields[0].value));
             },
             .Struct => |st| ret: {
                 for (st.fields) |f| {
@@ -41,45 +38,42 @@ pub fn FixedUi (
                         @compileError("Widget Theme struct must either give all fields default value or have .default() function");
                     }
                 }
-                break :ret context.WidgetTheme{};
+                break :ret context.Theme{};
             },
             else => @compileError("Widget Theme must be a supported type or have .default() function to produce default value"),
         };
+    const WidgetIdentity = if (context.Identity == void)
+        void else ?context.Identity;
+
+    const default_identity = if (context.Identity == void)
+        {} else null;
 
     return struct {
         const Ui = @This();
+        pub const Context = context;
         pub const Widget = struct {
             pub const Metadata = struct {
-                theme : context.WidgetTheme = default_widget_theme,
-                identity : ?context.WidgetIdentity = null,
-                user_data : ?context.UserData = null,
+                theme : context.Theme = default_widget_theme,
+                identity : WidgetIdentity = default_identity,
             };
 
-            area : Rectangle,
-            look : context.Widget,
-            behavior : ?context.Behavior = null,
+            interface : interface.Widget,
             meta : Metadata = .{},
         };
-        pub const UiContext = context;
         pub const LayoutContext = struct {
             ui : *Ui,
-            focus : ?context.WidgetIdentity,
-            active : ?context.WidgetIdentity,
+            focus : ?context.Identity,
+            active : ?context.Identity,
 
             pub fn addWidget (
                 self : LayoutContext,
-                area : Rectangle,
-                widget : context.Widget,
-                behavior : context.Behavior,
+                widget : interface.Widget,
                 config : Widget.Metadata,
             ) ! void {
                 if (self.ui.len >= size) return error.OutOfMemory;
-                try validateBehaviors(&widget, &behavior);
                 self.ui.widgets[self.ui.len] = Widget{
-                    .behavior = behavior,
-                    .look = widget,
+                    .interface = widget,
                     .meta = config,
-                    .area = area,
                 };
                 if (self.focus) |f| {
                     if (config.identity == f) {
@@ -95,66 +89,25 @@ pub fn FixedUi (
             }
             pub fn addPlainWidget (
                 self : LayoutContext,
-                area : Rectangle,
-                widget : context.Widget,
+                widget : interface.Widget,
             ) ! void {
                 if (self.ui.len >= size) return error.OutOfMemory;
                 self.ui.widgets[self.ui.len] = Widget{
-                    .look = widget,
-                    .area = area,
-                };
-                self.ui.len += 1;
-            }
-            pub fn addRichWidget (
-                self : LayoutContext,
-                area : Rectangle,
-                widget : context.Widget,
-                config : Widget.Metadata,
-            ) ! void {
-                if (self.ui.len >= size) return error.OutOfMemory;
-                self.ui.widgets[self.ui.len] = Widget{
-                    .look = widget,
-                    .area = area,
-                    .meta = config,
-                };
-                if (self.focus) |f| {
-                    if (config.identity == f) {
-                        self.ui.focus = &self.ui.widgets[self.ui.len];
-                    }
-                }
-                if (self.active) |a| {
-                    if (config.identity == a) {
-                        self.ui.active = &self.ui.widgets[self.ui.len];
-                    }
-                }
-                self.ui.len += 1;
-            }
-            pub fn addBehavingWidget (
-                self : LayoutContext,
-                area : Rectangle,
-                widget : context.Widget,
-                behavior : context.Behavior,
-            ) ! void {
-                if (self.ui.len >= size) return error.OutOfMemory;
-                try validateBehaviors(&widget, &behavior);
-                self.ui.widgets[self.ui.len] = Widget{
-                    .look = widget,
-                    .area = area,
-                    .behavior = behavior,
+                    .interface = widget,
                 };
                 self.ui.len += 1;
             }
             pub fn measureText (self : LayoutContext, text : []const u8, font_size : f32) f32 {
                 _ = self;
-                return cake.backend.view.measureText(text, font_size);
+                return cake.backend.measureText(text, font_size);
             }
             pub fn windowArea (self : LayoutContext) Rectangle {
                 _ = self;
-                return cake.backend.view.windowArea();
+                return cake.backend.windowArea();
             }
         };
 
-        theme : context.UiColorPalette,
+        theme : context.ColorPalette,
 
         widgets  : [size]Widget = undefined,
 
@@ -163,9 +116,9 @@ pub fn FixedUi (
         hover  : ?*Widget = null,
         focus  : ?*Widget = null,
         active : ?*Widget = null,
-        event  : ?context.UiEvent = null,
+        event  : ?context.Event = null,
 
-        pub fn init (theme : context.UiColorPalette) Ui {
+        pub fn init (theme : context.ColorPalette) Ui {
             return .{
                 .theme = theme,
             };
@@ -184,14 +137,19 @@ pub fn FixedUi (
         pub fn setPointerPosition (self : *Ui, position : ?Vector) void {
             self.pointer = position;
             if (position) |pos| {
+                if (self.hover) |hov| {
+                    if (hov.interface.containsPoint(pos)) {
+                        return;
+                    }
+                }
                 for (1..self.len + 1) |backwalk| {
                     const idx = self.len - backwalk;
                     var widget = &self.widgets[idx];
 
-                    if (widget.behavior == null) {
+                    if (widget.interface.isInteractive() == false) {
                         continue;
                     }
-                    if (widget.area.contains(pos) == false) {
+                    if (widget.interface.containsPoint(pos) == false) {
                         continue;
                     }
                     self.hover = widget;
@@ -206,33 +164,41 @@ pub fn FixedUi (
         }
         pub fn draw (self : *const Ui) void {
             for (0..self.len) |i| {
-                handleDrawingWidget(self, &self.widgets[i]);
+                const widget = &self.widgets[i];
+                const state = self.widgetState(widget);
+                const colors = if (@hasDecl(context.Theme, "getColorScheme")) col: {
+                    if (@typeInfo(context.ColorPalette) == .Pointer)
+                        break :col widget.meta.theme.getColorScheme(self.theme)
+                    else
+                        break :col widget.meta.theme.getColorScheme(&self.theme);
+                } else col: {
+                    break :col self.theme.getColors(widget.meta.theme);
+                };
+                widget.interface.draw(self.pointer, colors, state);
             }
         }
         pub fn sendInputEvent (self : *Ui, pointer : types.PointerEvent, keyboard : KeyboardEvent) ! void {
-            if (self.pointer == null) return;
+            const cursor = self.pointer orelse return error.NoPointerPosition;
+            const ui = interface.Ui {
+                .context = self,
+                .vtable = .{
+                    .isActive = &isActive,
+                    .sendEvent = &sendEvent,
+                }
+            };
 
             for (1..self.len + 1) |backwalk| {
                 const idx = self.len - backwalk;
-                const meta = &self.metadata[idx];
-                if (meta.interaction == null and meta.can_focus == false) {
+                const widget = &self.widgets[idx];
+                if (widget.interface.containsPoint(cursor) == false) {
                     continue;
                 }
-                if (self.zones[idx].contains(self.pointer.?) == false) {
-                    continue;
-                }
-
-                const result = try handleInputEvent(
-                    self,
-                    &self.widgets[idx].behavior,
-                    &self.widgets[idx].look,
-                    types.BehaviorContext{
-                        .area = self.widgets[idx].area,
-                        .position = self.pointer,
-                        .pointer = pointer,
-                        .keyboard = keyboard,
-                    },
-                );
+                const behavior_context = types.BehaviorContext{
+                    .position = cursor,
+                    .pointer = pointer,
+                    .keyboard = keyboard,
+                };
+                const result = try widget.interface.inputEvent(ui, behavior_context);
                 switch (result) {
                     .activated => {
                         self.active = idx;
@@ -263,28 +229,23 @@ pub fn FixedUi (
             self.focus = null;
         }
         pub fn sendPointerEvent (self : *Ui, event : types.PointerEvent) ! void {
-            if (self.pointer == null) return;
+            const pointer = self.pointer orelse return error.NoPointerPosition;
+            const ui = interface.Ui {
+                .context = self,
+                .vtable = .{
+                    .isActive = &isActive,
+                    .sendEvent = &sendEvent,
+                }
+            };
 
             for (1..self.len + 1) |backwalk| {
                 const idx = self.len - backwalk;
                 var widget = &self.widgets[idx];
-                if (widget.behavior == null) {
+                if (widget.interface.containsPoint(pointer) == false) {
                     continue;
                 }
-                if (widget.area.contains(self.pointer.?) == false) {
-                    continue;
-                }
-
-                const result = try handlePointerEvent(
-                    self,
-                    &widget.behavior.?,
-                    &widget.look,
-                    types.PointerContext{
-                        .area = widget.area,
-                        .position = self.pointer.?,
-                        .pointer = event,
-                    }
-                );
+                const state = self.widgetState(widget);
+                const result = try widget.interface.pointerEvent(ui, pointer, event, state);
                 switch (result) {
                     .activated => {
                         self.active = widget;
@@ -316,16 +277,18 @@ pub fn FixedUi (
         }
         pub fn sendKeyboardEvent (self : *Ui, event : KeyboardEvent) ! void {
             if (self.focus) |focus| {
-                if (focus.behavior) |*beh| {
-                    const keyboard = types.KeyboardContext{
-                        .area = focus.area,
-                        .keyboard = event,
-                    };
-                    try handleKeyboardEvent(self, beh, &focus.look, keyboard);
-                }
+                const ui = interface.Ui {
+                    .context = self,
+                    .vtable = .{
+                        .isActive = &isActive,
+                        .sendEvent = &sendEvent,
+                    }
+                };
+                const state = self.widgetState(focus);
+                try focus.interface.keyboardEvent(ui, event, state);
             }
         }
-        pub fn popEvent (self : *Ui) ?context.UiEvent {
+        pub fn popEvent (self : *Ui) ?context.Event {
             defer self.event = null;
             return self.event;
         }
@@ -338,285 +301,41 @@ pub fn FixedUi (
         pub fn getActiveWidget (self : *Ui) ?*Widget {
             return self.active;
         }
-        pub fn getWidget (self : *Ui, id : context.WidgetIdentity) ?*Widget {
+        pub fn getWidget (self : *Ui, id : context.Identity) ?*Widget {
             for (self.widgets[0..self.len]) |*w| {
                 if (w.meta.identity == id)
                     return w;
             }
             return null;
         }
-        pub fn isFocused (self : *Ui, behavior : *anyopaque) bool {
-            const focus = self.focus orelse return false;
-            if (focus.behavior == null) return false;
-            const beh : *anyopaque = &focus.behavior.?;
 
-            const ptr : usize = @intFromPtr(beh);
-            const end : usize = @max(1, @sizeOf(context.Behavior)) + ptr;
-            const bep : usize = @intFromPtr(behavior);
-            return bep >= ptr and bep < end;
+        fn widgetState (self : *const Ui, widget : *const Widget) DrawState {
+            return if (widget.interface.isInteractive()) flt: {
+                const over = self.hover == widget;
+                break :flt .{
+                    .focus = widget == self.focus,
+                    .active = widget == self.active,
+                    .hover = over,
+                    .normal = !over,
+                };
+            }
+            else flt: {
+                break :flt .{
+                    .focus = false,
+                    .hover = false,
+                    .active = false
+                };
+            };
         }
-        pub fn isActive (self : *Ui, behavior : *anyopaque) bool {
+        fn sendEvent (ptr : *anyopaque, event_ptr : *const anyopaque) void {
+            var self : *Ui = @ptrCast(@alignCast(ptr));
+            const event : *const context.Event = @ptrCast(@alignCast(event_ptr));
+            self.event = event.*;
+        }
+        fn isActive (ptr : *const anyopaque, widget_interface_ptr : *const anyopaque) bool {
+            const self : *const Ui = @ptrCast(@alignCast(ptr));
             const active = self.active orelse return false;
-            if (active.behavior == null) return false;
-            const beh : *anyopaque = &active.behavior.?;
-
-            const ptr : usize = @intFromPtr(beh);
-            const end : usize = @max(1, @sizeOf(context.Behavior)) + ptr;
-            const bep : usize = @intFromPtr(behavior);
-            return bep >= ptr and bep < end;
+            return active.interface.context == widget_interface_ptr;
         }
     };
-}
-
-/// Handles drawing a widget, calculating its state, colors and other context information
-pub fn handleDrawingWidget (ui : anytype, widget : anytype) void {
-    if (@typeInfo(@TypeOf(widget)) != .Pointer) @compileError("Widget must be passed by pointer");
-
-    const over = ui.hover == widget;
-
-    var draw_filter = DrawState{
-        .focus = widget == ui.focus,
-        .active = widget == ui.active,
-        .hover = over,
-        .normal = !over,
-    };
-
-    if (widget.behavior == null) {
-        draw_filter = .{
-            .focus = false,
-            .hover = false,
-            .active = false
-        };
-    }
-    const ui_context = @TypeOf(ui.*).UiContext;
-    const colors = if (@hasDecl(ui_context.WidgetTheme, "getColorScheme")) col: {
-        if (@typeInfo(ui_context.UiColorPalette) == .Pointer)
-            break :col widget.meta.theme.getColorScheme(ui.theme)
-        else
-            break :col widget.meta.theme.getColorScheme(&ui.theme);
-    } else col: {
-        break :col ui.theme.getColors(widget.meta.theme);
-    };
-    const context = types.DrawingContext{
-        .area = widget.area,
-        .colors = colors,
-        .state = draw_filter,
-        .position = ui.pointer,
-    };
-    drawWidget(widget, &widget.look, context);
-}
-/// This function is used to unwrap the widget from inside of an union to call its draw function with provided context
-pub fn drawWidget (meta : anytype, widget : anytype, context : types.DrawingContext) void {
-    const info = @typeInfo(@TypeOf(widget));
-
-    if (info != .Pointer and info.Pointer.size != .One) @compileError("Widget needs to be a pointer");
-
-    const widget_info = @typeInfo(info.Pointer.child);
-    switch (widget_info) {
-        .Struct => {
-            widget.draw(meta, context);
-        },
-        .Union => |wid| {
-            if (wid.tag_type == null) @compileError("Widget union needs to be tagged");
-            switch (widget.*) {
-                inline else => |*w| {
-                    drawWidget(meta, w, context);
-                }
-            }
-        },
-        else => {
-            @compileError("Unsupported widget type");
-        }
-    }
-}
-
-/// Recursively unwraps the widget from inside union type and call its InputEvent function
-fn handleInputEvent (ui : anytype, behavior : anytype, look : anytype, event : types.BehaviorContext) ! cake.EventResult {
-    const behavior_info = @typeInfo(@TypeOf(behavior));
-
-    switch (behavior_info) {
-        .Pointer => |ptr| {
-            switch (@typeInfo(ptr.child)) {
-                .Struct => {
-                    const look_info = @typeInfo(@TypeOf(look));
-                    switch (look_info) {
-                        .Pointer => |lptr| {
-                            switch (@typeInfo(lptr.child)) {
-                                .Struct => {
-                                    if (@hasDecl(ptr.child, "inputEvent")) {
-                                        return behavior.inputEvent(ui, look, event);
-                                    }
-                                    else {
-                                        return error.NoInputHandler;
-                                    }
-                                },
-                                .Union => |uni| {
-                                    if (uni.tag_type == null) @compileError("Look union must be tagged");
-                                    switch (look.*) {
-                                        inline else => |*lo| {
-                                            return handleInputEvent(ui, behavior, lo, event);
-                                        }
-                                    }
-                                },
-                                else => @compileError("Look type is not supported, use union or struct"),
-                            }
-                        },
-                        else => @compileError("Look must be passed by pointer"),
-                    }
-                },
-                .Union => |uni| {
-                    if (uni.tag_type == null) @compileError("Behavior union must be tagged");
-                    switch (behavior.*) {
-                        inline else => |*beh| {
-                            return handleInputEvent(ui, beh, look, event);
-                        }
-                    }
-                },
-                else => @compileError("Behavior type is not supported, use union or struct instead of " ++ @typeName(ptr.child)),
-            }
-        },
-        else => @compileError("Behavior must be passed by pointer"),
-    }
-}
-/// Handles properly passing event to behavior.
-/// The function first unwraps behavior and look from unions and passes actual data to the behavior handler
-fn handlePointerEvent (ui : anytype, behavior : anytype, look : anytype, event : types.PointerContext) ! cake.EventResult {
-    const behavior_info = @typeInfo(@TypeOf(behavior));
-
-    switch (behavior_info) {
-        .Pointer => |ptr| {
-            switch (@typeInfo(ptr.child)) {
-                .Struct => {
-                    const look_info = @typeInfo(@TypeOf(look));
-                    switch (look_info) {
-                        .Pointer => |lptr| {
-                            switch (@typeInfo(lptr.child)) {
-                                .Struct => {
-                                    if (@hasDecl(ptr.child, "pointerEvent")) {
-                                        return behavior.pointerEvent(ui, look, event);
-                                    }
-                                    else {
-                                        return error.NoPointerHandler;
-                                    }
-                                },
-                                .Union => |uni| {
-                                    if (uni.tag_type == null) @compileError("Look union must be tagged");
-                                    switch (look.*) {
-                                        inline else => |*lo| {
-                                            return handlePointerEvent(ui, behavior, lo, event);
-                                        }
-                                    }
-                                },
-                                else => @compileError("Look type is not supported, use union or struct"),
-                            }
-                        },
-                        else => @compileError("Look must be passed by pointer"),
-                    }
-                },
-                .Union => |uni| {
-                    if (uni.tag_type == null) @compileError("Behavior union must be tagged");
-                    switch (behavior.*) {
-                        inline else => |*beh| {
-                            return handlePointerEvent(ui, beh, look, event);
-                        }
-                    }
-                },
-                else => @compileError("Behavior type is not supported, use union or struct instead of " ++ @typeName(ptr.child)),
-            }
-        },
-        else => @compileError("Behavior must be passed by pointer"),
-    }
-}
-/// Handles unwrapping widget behaviors from unions to call on the keyboardEvent handler with provided context
-fn handleKeyboardEvent (ui : anytype, behavior : anytype, look : anytype, event : types.KeyboardContext) ! void {
-    switch (@typeInfo(@TypeOf(behavior))) {
-        .Pointer => |bptr| {
-            switch (@typeInfo(bptr.child)) {
-                .Struct => switch(@typeInfo(@TypeOf(look))) {
-                    .Pointer => |lptr| switch (@typeInfo(lptr.child)) {
-                        .Struct => {
-                            if (@hasDecl(bptr.child, "keyboardEvent")) {
-                                return behavior.keyboardEvent(ui, look, event);
-                            }
-                            else {
-                                return error.NoKeyboardHandler;
-                            }
-                        },
-                        .Union => |uni| {
-                            if (uni.tag_type == null) @compileError("Look union needs to be tagged");
-                            switch (look.*) {
-                                inline else => |*l| {
-                                    return handleKeyboardEvent(ui, behavior, l, event);
-                                }
-                            }
-                        },
-                        else => @compileError("Unsupported look type, must be a struct or union"),
-                    },
-                    else => @compileError("Look must be a pointer to handle keyboard events"),
-                },
-                .Union => |uni| {
-                    if (uni.tag_type == null) @compileError("Behavior union needs to be tagged");
-                    switch (behavior.*) {
-                        inline else => |*wid| {
-                            return handleKeyboardEvent(ui, wid, look, event);
-                        }
-                    }
-                },
-                else => @compileError("Unsupported behavior type, must be a struct or union"),
-            }
-        },
-        else => {
-            @compileError("Behavior must be a pointer to handle keyboard events");
-        }
-    }
-}
-
-/// Ensures the widget and behavior pair are compatible with each other, function recursively unwraps both from unions to pass the correct type to behavior validation function
-fn validateBehaviors (widget : anytype, behavior : anytype) ! void {
-    const behavior_info = @typeInfo(@TypeOf(behavior));
-
-    switch (behavior_info) {
-        .Pointer => |ptr| {
-            switch (@typeInfo(ptr.child)) {
-                .Union => {
-                    switch (behavior.*) {
-                        inline else => |*b| {
-                            return validateBehaviors(widget, b);
-                        }
-                    }
-                },
-                .Struct => {
-                    const widget_info = @typeInfo(@TypeOf(widget));
-                    switch (widget_info) {
-                        .Pointer => |w| {
-                            switch (@typeInfo(w.child)) {
-                                .Union => {
-                                    switch (widget.*) {
-                                        inline else => |*b| {
-                                            return validateBehaviors(b, behavior);
-                                        }
-                                    }
-                                },
-                                .Struct => {
-                                    const beh = @TypeOf(behavior.*);
-                                    if (@hasDecl(beh, "validate")) {
-                                        return beh.validate(w.child);
-                                    }
-                                },
-                                else => @compileError("Unsupported widget type for validation"),
-                            }
-                        },
-                        else => {
-                            @compileError("Widget needs to be a pointer for validation");
-                        }
-                    }
-                },
-                .Void => {},
-                else => @compileError("Unsupported behavior type for validation"),
-            }
-        },
-        else => {
-            @compileError("Behavior needs to be a pointer for validation");
-        }
-    }
 }

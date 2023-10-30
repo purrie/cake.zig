@@ -26,23 +26,29 @@ pub fn main () !void {
         .tarts = 4,
     };
 
-    var resource_bar = ResourceBar{
-        .resources = &resources,
-        .improvements = &improvements,
-    };
+    var resource_bar = ResourceBar{};
+    try resource_bar.connect();
+    resource_bar.updateLayout(&resources, &improvements);
+
     var clicker = BakeButton{};
+    clicker.uiLayout();
+    try clicker.connect();
+
     var purchasers = PurchaseButtons{
         .resources = &resources,
         .costs = &purchase_costs,
         .next_costs = &next_purchase_costs,
         .improvements = &improvements,
     };
-    var warning = WarningWindow{};
-    var tooltip = Tooltip{};
+    purchasers.uiLayout();
+    try purchasers.connect();
 
-    try resource_bar.uiLayout();
-    try clicker.uiLayout();
-    try purchasers.uiLayout();
+    var warning = WarningWindow{};
+    warning.uiLayout();
+    try warning.connect();
+
+    var tooltip = Tooltip{};
+    try tooltip.connect();
 
     var rebake = false;
     var show_tooltip = false;
@@ -63,7 +69,7 @@ pub fn main () !void {
                 error.cookies => try warning.warn("Not enough Cookies"),
                 error.cakes => try warning.warn("Not enough Cakes"),
                 error.pies => try warning.warn("Not enough Pies"),
-                // error.tarts => try warning.warn("Not enough Tarts"),
+                else => unreachable,
             }
             break :p false;
         }) {
@@ -87,7 +93,7 @@ pub fn main () !void {
         warning.tickDown();
         if (rebake) {
             rebake = false;
-            try resource_bar.uiLayout();
+            resource_bar.updateLayout(&resources, &improvements);
         }
 
         ray.ClearBackground(ray.BLACK);
@@ -127,9 +133,6 @@ fn purchaseUpgrade (money : *usize, cost : *usize, next_cost : *usize) bool {
 }
 
 // Ui Code --------------------------------------------------------------------
-const BakeEvent = enum {
-    bake,
-};
 const PastryType = enum {
     cookies,
     cakes,
@@ -141,37 +144,34 @@ const SingleTheme = enum {
 };
 
 const Tooltip = struct {
-    const Ui = cake.FixedUi(
-        .{
-            .Widget = cake.widgets.TextDisplay,
-        }, 1
-    );
+    const Ui = cake.FixedUi(.{}, 1);
     const Stream = std.io.FixedBufferStream([]u8);
+    const Label = cake.widgets.Decor(cake.contains.FixedStringBuffer(128), cake.looks_like.text_display);
 
-    buffer : [30]u8 = undefined,
+    label : Label = .{ .data = .{ .font_size = font_size } },
     ui : Ui = .{ .theme = cake.theme_light },
     stream : Stream = undefined,
 
+    pub fn connect (self : *@This()) ! void {
+        var ui = self.ui.layout();
+        try ui.addPlainWidget(self.label.getInterface());
+    }
     pub fn writer (self : *@This()) Stream.Writer {
-        self.stream = .{ .buffer = self.buffer[0..], .pos = 0 };
+        self.stream = .{ .buffer = self.label.data.text[0..], .pos = 0 };
         return self.stream.writer();
     }
     pub fn enableTooltip(self : *@This(), position : cake.Vector) ! void {
         if (self.stream.pos == 0) return error.NoTooltip;
-        self.buffer[self.stream.pos] = 0;
-        const string = self.buffer[0..self.stream.pos :0];
-        var paint = self.ui.layout();
-        const size = paint.measureText(string, font_size);
-        const screen = paint.windowArea();
+        const string = self.label.data.text[0..self.stream.pos];
+        const size = cake.backend.measureText(string, font_size);
+        const screen = cake.backend.windowArea();
         var tooltip = cake.Rectangle{
             .position = position,
             .size = .{ size + font_size, font_size * 2 }
         };
         tooltip.clampInsideOf(screen);
-        try paint.addPlainWidget(
-            tooltip,
-            .{ .text = string, .size = font_size }
-        );
+        self.label.area = tooltip;
+        self.label.data.len = self.stream.pos;
     }
     pub fn draw (self : *@This()) void {
         self.ui.draw();
@@ -179,134 +179,132 @@ const Tooltip = struct {
 };
 const ResourceBar = struct {
     const Ui = cake.FixedUi(.{}, 9);
+    const Background = cake.widgets.Decor(void, cake.looks_like.background);
+    const Label = cake.widgets.Decor(cake.contains.FixedStringBuffer(buffer_size), cake.looks_like.label);
     const buffer_size = 20;
-
     const label_spacing = 16;
 
-    resources : *Resources,
-    improvements : *Resources,
     interface : Ui = Ui{ .theme = cake.theme_light },
 
+    background : Background = .{ .data = {} },
 
-    cookie_buffer : [buffer_size]u8 = [_]u8{0} ** buffer_size,
-    cakes_buffer  : [buffer_size]u8 = [_]u8{0} ** buffer_size,
-    pies_buffer   : [buffer_size]u8 = [_]u8{0} ** buffer_size,
-    tarts_buffer  : [buffer_size]u8 = [_]u8{0} ** buffer_size,
+    cookies : Label = .{ .data = .{ .font_size = font_size } },
+    cakes   : Label = .{ .data = .{ .font_size = font_size } },
+    pies    : Label = .{ .data = .{ .font_size = font_size } },
+    tarts   : Label = .{ .data = .{ .font_size = font_size } },
 
-    cookie_baker_buffer : [buffer_size]u8 = [_]u8{0} ** buffer_size,
-    cakes_baker_buffer  : [buffer_size]u8 = [_]u8{0} ** buffer_size,
-    pies_baker_buffer   : [buffer_size]u8 = [_]u8{0} ** buffer_size,
-    tarts_baker_buffer  : [buffer_size]u8 = [_]u8{0} ** buffer_size,
+    baker_cookie : Label = .{ .data = .{ .font_size = font_size } },
+    baker_cake   : Label = .{ .data = .{ .font_size = font_size } },
+    baker_pie    : Label = .{ .data = .{ .font_size = font_size } },
+    baker_tart   : Label = .{ .data = .{ .font_size = font_size } },
 
-    pub fn uiLayout (self : *@This()) ! void {
+    pub fn connect (self : *@This()) ! void {
         const ui = self.interface.layout();
-        var screen = ui.windowArea();
+        try ui.addPlainWidget(self.background.getInterface());
+        try ui.addPlainWidget(self.cookies.getInterface());
+        try ui.addPlainWidget(self.cakes.getInterface());
+        try ui.addPlainWidget(self.pies.getInterface());
+        try ui.addPlainWidget(self.tarts.getInterface());
+        try ui.addPlainWidget(self.baker_cookie.getInterface());
+        try ui.addPlainWidget(self.baker_cake.getInterface());
+        try ui.addPlainWidget(self.baker_pie.getInterface());
+        try ui.addPlainWidget(self.baker_tart.getInterface());
+    }
+
+    pub fn updateLayout (self : *@This(), resources : *const Resources, improvements : *const Resources) void {
+        var screen = cake.backend.windowArea();
+        const measureText = cake.backend.measureText;
         screen = screen.cutHorizontal(font_size + 8, 0);
 
-        try ui.addPlainWidget(screen, .{ .background = .{} });
+        self.background.area = screen;
         screen.shrinkBy(@splat(4));
 
         // Resource counters
         {
-            const cookie_value = std.fmt.bufPrintZ(
-                self.cookie_buffer[0..],
+            const cookie_value = std.fmt.bufPrint(
+                self.cookies.data.text[0..],
                 "Cookies: {d}",
-                .{self.resources.cookies}
+                .{resources.cookies}
             ) catch "inf";
-            try ui.addPlainWidget(
-                screen.cutVertical(
-                    ui.measureText(cookie_value, font_size),
-                    label_spacing,
-                ),
-                .{ .label = .{ .text = cookie_value, .size = font_size }},
+            self.cookies.data.len = cookie_value.len;
+            self.cookies.area = screen.cutVertical(
+                measureText(self.cookies.data.getString(), font_size),
+                label_spacing,
             );
 
-            const cakes_value = std.fmt.bufPrintZ(
-                self.cakes_buffer[0..],
+            const cakes_value = std.fmt.bufPrint(
+                self.cakes.data.text[0..],
                 "Cakes: {d}",
-                .{ self.resources.cakes }
+                .{ resources.cakes }
             ) catch "inf";
-            try ui.addPlainWidget(
-                screen.cutVertical(
-                    ui.measureText(cakes_value, font_size),
-                    label_spacing
-                ),
-                .{ .label = .{ .text = cakes_value, .size = font_size } }
+            self.cakes.data.len = cakes_value.len;
+            self.cakes.area = screen.cutVertical(
+                measureText(cakes_value, font_size),
+                label_spacing
             );
 
-            const pies_value = std.fmt.bufPrintZ(
-                self.pies_buffer[0..],
+            const pies_value = std.fmt.bufPrint(
+                self.pies.data.text[0..],
                 "Pies: {d}",
-                .{ self.resources.pies }
+                .{ resources.pies }
             ) catch "inf";
-            try ui.addPlainWidget(
-                screen.cutVertical(
-                    ui.measureText(pies_value, font_size),
-                    label_spacing
-                ),
-                .{ .label = .{ .text = pies_value, .size = font_size } }
+            self.pies.data.len = pies_value.len;
+            self.pies.area = screen.cutVertical(
+                measureText(pies_value, font_size),
+                label_spacing
             );
 
             const tart_value = std.fmt.bufPrintZ(
-                self.tarts_buffer[0..],
+                self.tarts.data.text[0..],
                 "Tarts: {d}",
-                .{ self.resources.tarts }
+                .{ resources.tarts }
             ) catch "inf";
-            try ui.addPlainWidget(
-                screen.cutVertical(
-                    ui.measureText(tart_value, font_size),
-                    label_spacing
-                ),
-                .{ .label = .{ .text = tart_value, .size = font_size } }
+            self.tarts.data.len = tart_value.len;
+            self.tarts.area = screen.cutVertical(
+                measureText(tart_value, font_size),
+                label_spacing
             );
         }
         // Improvements counters
         {
-            const tart_bakers = std.fmt.bufPrintZ(
-                self.tarts_baker_buffer[0..],
-                "Tart Bakers: {d}", .{ self.improvements.tarts }
+            const tart_bakers = std.fmt.bufPrint(
+                self.baker_tart.data.text[0..],
+                "Tart Bakers: {d}", .{ improvements.tarts }
             ) catch "inf";
-            try ui.addPlainWidget(
-                screen.cutVertical(
-                    -ui.measureText(tart_bakers, font_size),
-                    label_spacing
-                ),
-                .{ .label = .{ .text = tart_bakers, .size = font_size } }
-            );
-            const pie_bakers = std.fmt.bufPrintZ(
-                self.pies_baker_buffer[0..],
-                "Pie Bakers: {d}", .{ self.improvements.pies }
-            ) catch "inf";
-            try ui.addPlainWidget(
-                screen.cutVertical(
-                    -ui.measureText(pie_bakers, font_size),
-                    label_spacing
-                ),
-                .{ .label = .{ .text = pie_bakers, .size = font_size } }
+            self.baker_tart.data.len = tart_bakers.len;
+            self.baker_tart.area = screen.cutVertical(
+                -measureText(tart_bakers, font_size),
+                label_spacing
             );
 
-            const cake_bakers = std.fmt.bufPrintZ(
-                self.cakes_baker_buffer[0..],
-                "Cake Bakers: {d}", .{ self.improvements.cakes }
+            const pie_bakers = std.fmt.bufPrint(
+                self.baker_pie.data.text[0..],
+                "Pie Bakers: {d}", .{ improvements.pies }
             ) catch "inf";
-            try ui.addPlainWidget(
-                screen.cutVertical(
-                    -ui.measureText(cake_bakers, font_size),
-                    label_spacing
-                ),
-                .{ .label = .{ .text = cake_bakers, .size = font_size } }
+            self.baker_pie.data.len = pie_bakers.len;
+            self.baker_pie.area = screen.cutVertical(
+                -measureText(pie_bakers, font_size),
+                label_spacing
             );
 
-            const cookie_bakers = std.fmt.bufPrintZ(
-                self.cookie_baker_buffer[0..],
-                "Cookie Bakers: {d}", .{ self.improvements.cookies }
+            const cake_bakers = std.fmt.bufPrint(
+                self.baker_cake.data.text[0..],
+                "Cake Bakers: {d}", .{ improvements.cakes }
             ) catch "inf";
-            try ui.addPlainWidget(
-                screen.cutVertical(
-                    -ui.measureText( cookie_bakers, font_size ),
-                    label_spacing
-                ),
-                .{ .label = .{ .text = cookie_bakers, .size = font_size } }
+            self.baker_cake.data.len = cake_bakers.len;
+            self.baker_cake.area = screen.cutVertical(
+                -measureText(cake_bakers, font_size),
+                label_spacing
+            );
+
+            const cookie_bakers = std.fmt.bufPrint(
+                self.baker_cookie.data.text[0..],
+                "Cookie Bakers: {d}", .{ improvements.cookies }
+            ) catch "inf";
+            self.baker_cookie.data.len = cookie_bakers.len;
+            self.baker_cookie.area = screen.cutVertical(
+                -measureText( cookie_bakers, font_size ),
+                label_spacing
             );
         }
     }
@@ -315,37 +313,38 @@ const ResourceBar = struct {
     }
 };
 const BakeButton = struct {
-    const Ui = cake.FixedUi(
-        .{
-            .Widget = cake.widgets.TextDisplay,
-            .Behavior = cake.behaviors.Button(BakeEvent),
-            .UiEvent = BakeEvent,
-        },
-        1
-    );
+    const BakeEvent = enum {
+        bake,
+    };
+    const Ui = cake.FixedUi(.{.Event = BakeEvent,}, 1);
+    const Button = cake.widgets.Widget(cake.contains.Text, cake.looks_like.text_display, cake.acts_like.Button(BakeEvent));
     interface : Ui = Ui{ .theme = cake.theme_light },
-    label : [:0]const u8 = "Bake",
 
-    pub fn uiLayout (self : *@This()) ! void {
+    label : Button = .{
+        .data = .{ .text = "Bake", .font_size = font_size },
+        .behavior = .{ .event = .bake }
+    },
+
+    pub fn connect (self : *@This()) ! void {
+        const ui = self.interface.layout();
+        try ui.addPlainWidget(self.label.getInterface());
+    }
+
+    pub fn uiLayout (self : *@This()) void {
         const ui = self.interface.layout();
         var location = ui.windowArea();
         location = location.cutVerticalPercent(0.5, 0);
-        const size = ui.measureText(self.label, font_size);
+        const size = ui.measureText(self.label.data.text, font_size);
         location.shrinkTo(@splat(size * 2));
-
-        try ui.addBehavingWidget(
-            location,
-            .{ .text = self.label, .size = font_size },
-            .{ .event = .bake }
-        );
+        self.label.area = location;
     }
     pub fn click (self : *@This(), mouse : cake.Vector) bool {
         self.interface.setPointerPosition(mouse);
         if (ray.IsMouseButtonPressed(ray.MOUSE_BUTTON_LEFT)) {
-            try self.interface.sendPointerEvent(.{ .press = .left });
+            self.interface.sendPointerEvent(.{ .press = .left }) catch {};
         }
         if (ray.IsMouseButtonReleased(ray.MOUSE_BUTTON_LEFT)) {
-            try self.interface.sendPointerEvent(.{ .lift = .left });
+            self.interface.sendPointerEvent(.{ .lift = .left }) catch {};
         }
         return self.interface.popEvent() != null;
     }
@@ -361,18 +360,31 @@ const BakeButton = struct {
     }
 };
 const PurchaseButtons = struct {
-    const Ui = cake.FixedUi(
-        .{
-            .UiEvent = PastryType,
-            .WidgetIdentity = PastryType,
-            .Behavior = cake.behaviors.Button(PastryType),
-        },
-        5
+    const Ui = cake.FixedUi(.{ .Identity = PastryType, .Event = PastryType }, 5);
+    const Background = cake.widgets.Decor(void, cake.looks_like.background);
+    const Button = cake.widgets.Widget(
+        cake.contains.Text,
+        cake.looks_like.text_display,
+        cake.acts_like.Button(PastryType),
     );
-    const label_cookie = "Hire Cookie Baker";
-    const label_cakes  = "Hire Cake Baker";
-    const label_pies   = "Hire Pie Baker";
-    const label_tarts  = "Hire Tart Baker";
+
+    background : Background = .{ .data = {} },
+    cookie : Button = .{
+        .data = .{ .text = "Hire Cookie Baker", .font_size = font_size },
+        .behavior = .{ .event = .cookies },
+    },
+    cakes : Button = .{
+        .data = .{ .text = "Hire Cake Baker", .font_size = font_size },
+        .behavior = .{ .event = .cakes },
+    },
+    pies : Button = .{
+        .data = .{ .text = "Hire Pie Baker", .font_size = font_size },
+        .behavior = .{ .event = .pies },
+    },
+    tarts : Button = .{
+        .data = .{ .text = "Hire Tart Baker", .font_size = font_size },
+        .behavior = .{ .event = .tarts },
+    },
 
     interface : Ui = Ui { .theme = cake.theme_light },
     resources : *Resources,
@@ -380,61 +392,47 @@ const PurchaseButtons = struct {
     next_costs : *Resources,
     improvements : *Resources,
 
-    pub fn uiLayout (self : *@This()) ! void {
+    pub fn connect (self : *@This()) ! void {
         const ui = self.interface.layout();
+        try ui.addPlainWidget(self.background.getInterface());
 
-        const cookie_size = ui.measureText(label_cookie , font_size);
-        const cake_size   = ui.measureText(label_cakes  , font_size);
-        const pie_size    = ui.measureText(label_pies   , font_size);
-        const tart_size   = ui.measureText(label_tarts  , font_size);
+        try ui.addWidget(self.cookie.getInterface(), .{ .theme = .interactive, .identity = .cookies });
+        try ui.addWidget(self.cakes.getInterface(),  .{ .theme = .interactive, .identity = .cakes });
+        try ui.addWidget(self.pies.getInterface(),   .{ .theme = .interactive, .identity = .pies });
+        try ui.addWidget(self.tarts.getInterface(),  .{ .theme = .interactive, .identity = .tarts });
+    }
+    pub fn uiLayout (self : *@This()) void {
+        const measureText = cake.backend.measureText;
+
+        const cookie_size = measureText(self.cookie.data.text , font_size);
+        const cake_size   = measureText(self.cakes.data.text  , font_size);
+        const pie_size    = measureText(self.pies.data.text   , font_size);
+        const tart_size   = measureText(self.tarts.data.text  , font_size);
 
         const max_width   = @max(@max(cookie_size, cake_size), @max(pie_size, tart_size));
         const button_size = font_size + 16;
         const spacing     = font_size * 0.5;
 
-        var location = ui.windowArea();
+        var location = cake.backend.windowArea();
         location = location.cutVerticalPercent(-0.5, 0);
         location.shrinkTo(.{ max_width + 16, button_size * 4 + spacing * 5 });
 
-        try ui.addPlainWidget(
-            location,
-            .{ .background = .{} }
-        );
+        self.background.area = location;
 
         location.shrinkWidthTo(max_width + 8);
         location.size[1] = button_size;
         location.move(.{ 0, spacing });
 
-        try ui.addWidget(
-            location,
-            .{ .display = .{ .text = label_cookie, .size = font_size }},
-            .{ .event = .cookies },
-            .{ .theme = .interactive, .identity = .cookies }
-        );
+        self.cookie.area = location;
 
         location.move(.{ 0, button_size + spacing });
-        try ui.addWidget(
-            location,
-            .{ .display = .{ .text = label_cakes, .size = font_size } },
-            .{ .event = .cakes },
-            .{ .theme = .interactive, .identity = .cakes }
-        );
+        self.cakes.area = location;
 
         location.move(.{ 0, button_size + spacing });
-        try ui.addWidget(
-            location,
-            .{ .display = .{ .text = label_pies, .size = font_size } },
-            .{ .event = .pies },
-            .{ .theme = .interactive, .identity = .pies }
-        );
+        self.pies.area = location;
 
         location.move(.{ 0, button_size + spacing });
-        try ui.addWidget(
-            location,
-            .{ .display = .{ .text = label_tarts, .size = font_size } },
-            .{ .event = .tarts },
-            .{ .theme = .interactive, .identity = .tarts }
-        );
+        self.tarts.area = location;
     }
 
     pub fn update (self : *@This(), mouse : cake.Vector) ! bool {
@@ -513,12 +511,12 @@ const PurchaseButtons = struct {
 const WarningWindow = struct {
     const Ui = cake.FixedUi(
         .{
-            .WidgetTheme = SingleTheme,
-            .UiColorPalette = cake.FixedPalette(SingleTheme),
-            .Widget = cake.widgets.TextDisplay,
+            .Theme = SingleTheme,
+            .ColorPalette = cake.FixedPalette(SingleTheme),
         },
         1
     );
+    const Label = cake.widgets.Decor(cake.contains.Text, cake.looks_like.text_display);
     const reset_timer = 3;
 
     interface : Ui = .{
@@ -528,16 +526,19 @@ const WarningWindow = struct {
             }
         }
     },
-    text : [:0]const u8 = "",
+    text : Label = .{ .data = .{ .text = "", .font_size = font_size }},
     timer : f32 = -1,
     window : ?*WarningWindow = null,
 
-    pub fn uiLayout (self : *@This()) ! void {
+    pub fn connect (self : *@This()) ! void {
         var ui = self.interface.layout();
-        var screen = ui.windowArea();
+        try ui.addPlainWidget(self.text.getInterface());
+    }
+    pub fn uiLayout (self : *@This()) void {
+        var screen = cake.backend.windowArea();
         screen = screen.cutHorizontalPercent(-0.2, 0);
         screen.shrinkBy(@splat(10));
-        try ui.addPlainWidget(screen, .{ .text = self.text, .size = font_size });
+        self.text.area = screen;
     }
     pub fn draw (self : *const @This()) void {
         if (self.timer > 0) {
@@ -548,9 +549,8 @@ const WarningWindow = struct {
     pub fn tickDown (self : *@This()) void {
         self.timer -= ray.GetFrameTime();
     }
-    pub fn warn (self : *@This(), warning : [:0]const u8) ! void {
+    pub fn warn (self : *@This(), warning : []const u8) ! void {
         self.timer = reset_timer;
-        self.text = warning;
-        try self.uiLayout();
+        self.text.data.text = warning;
     }
 };

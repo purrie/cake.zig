@@ -3,17 +3,20 @@ const ray = @cImport(@cInclude("raylib.h"));
 
 const TextUi = cake.FixedUi(
     .{
-        .UiColorPalette = UiTheme,
-        .WidgetTheme = WidgetTheme,
+        .ColorPalette = UiTheme,
+        .Theme = WidgetTheme,
     }, 6);
 
 const ColorScheme = cake.ColorScheme;
 
-const UiTheme = cake.FixedPallete(WidgetTheme);
+const UiTheme = cake.FixedPalette(WidgetTheme);
 const WidgetTheme = enum {
     light,
     danger,
 };
+const Bg = cake.widgets.Decor(void, cake.looks_like.background);
+const Frame = cake.widgets.Decor(cake.contains.Frame, cake.looks_like.frame);
+const Label = cake.widgets.Decor(cake.contains.Text, cake.looks_like.label);
 
 const Ui = struct {
     interface : TextUi = .{
@@ -24,40 +27,50 @@ const Ui = struct {
             }
         }
     },
-    font_size : f32 = 20,
     margin : f32 = 8,
-    label_top : []const u8 = "Top Side",
-    label_bottom : []const u8 = "Bottom Side",
 
-    pub fn uiLayout (self : *@This()) ! void {
+    background_top : Bg = .{ .data = {} },
+    background_bottom : Bg = .{ .data = {} },
+
+    label_top : Label = .{ .data = .{ .text = "Top Side", .font_size = 32 } },
+    label_bottom : Label = .{ .data = .{ .text = "Bottom Side", .font_size = 20 } },
+
+    frame : Frame = .{ .data = .{ .thickness = 4.0 } },
+    other_frame : Frame = .{ .data = .{ .thickness = 3.0 } },
+
+    pub fn connect (self : *@This()) ! void {
         const ui = self.interface.layout();
-        const top_width = ui.measureText(self.label_top, self.font_size);
-        const bottom_width = ui.measureText(self.label_bottom, self.font_size);
+        try ui.addPlainWidget(self.background_top.getInterface());
+        try ui.addPlainWidget(self.frame.getInterface());
+        try ui.addPlainWidget(self.label_top.getInterface());
 
-        var area = ui.windowArea();
+        try ui.addWidget(self.background_bottom.getInterface(), .{ .theme = .danger });
+        try ui.addWidget(self.other_frame.getInterface(), .{ .theme = .danger });
+        try ui.addWidget(self.label_bottom.getInterface(), .{ .theme = .danger });
+    }
+    pub fn uiLayout (self : *@This()) void {
+        const top_width = cake.backend.measureText(self.label_top.data.text, self.label_top.data.font_size);
+        const bottom_width = cake.backend.measureText(self.label_bottom.data.text, self.label_bottom.data.font_size);
 
+        var area = cake.backend.windowArea();
         var areas = area.splitHorizontalPercent(2, 0.1);
-        areas[0].shrinkTo(.{ top_width + self.margin, self.font_size + self.margin });
-        try ui.addPlainWidget(areas[0], .{ .background = .{} });
+        areas[0].shrinkTo(.{ top_width + self.margin, self.label_top.data.font_size + self.margin });
+        self.background_top.area = areas[0];
 
-        areas[0].shrinkBy(@splat(self.margin * 0.5));
-        try ui.addPlainWidget(areas[0], .{ .frame = .{ .thickness = 1.0 } });
+        areas[0].shrinkBy(@splat(self.margin * 0.2));
+        self.frame.area = areas[0];
 
-        areas[0].shrinkBy(@splat(self.margin * 0.5));
-        try ui.addPlainWidget(areas[0], .{ .label = .{ .text = self.label_top, .size = self.font_size } });
+        areas[0].shrinkBy(@splat(self.margin * 0.8));
+        self.label_top.area = areas[0];
 
-        areas[1].shrinkTo(.{ bottom_width + self.margin, self.font_size + self.margin });
-        try ui.addRichWidget(areas[1], .{ .background = .{} }, .{ .theme = .danger });
+        areas[1].shrinkTo(.{ bottom_width + self.margin, self.label_bottom.data.font_size + self.margin });
+        self.background_bottom.area = areas[1];
 
-        areas[1].shrinkBy(@splat(self.margin * 0.5));
-        try ui.addRichWidget(areas[1], .{ .frame = .{ .thickness = 2 } }, .{ .theme = .danger });
+        areas[1].shrinkBy(@splat(self.margin * 0.2));
+        self.other_frame.area = areas[1];
 
-        areas[1].shrinkBy(@splat(self.margin * 0.5));
-        try ui.addRichWidget(
-            areas[1],
-            .{ .label = .{ .text = self.label_bottom, .size = self.font_size } },
-            .{ .theme = .danger }
-        );
+        areas[1].shrinkBy(@splat(self.margin * 0.8));
+        self.label_bottom.area = areas[1];
     }
 };
 
@@ -66,7 +79,8 @@ pub fn main() !void {
     defer ray.CloseWindow();
 
     var ui = Ui{};
-    try ui.uiLayout();
+    ui.uiLayout();
+    try ui.connect();
 
     while (ray.WindowShouldClose() == false) {
         ray.BeginDrawing();

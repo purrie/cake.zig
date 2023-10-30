@@ -30,7 +30,7 @@ pub fn inputTextUnicode (
     text_buffer : []u8,
     capacity : usize,
     cursor : usize,
-    codepoint : u32
+    codepoint : u21
 ) error { OutOfMemory, InvalidCharacter } ! usize {
     if (codepoint == 0) return error.InvalidCharacter;
     const pointer = if (cursor > text_buffer.len) text_buffer.len else cursor;
