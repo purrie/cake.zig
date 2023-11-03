@@ -40,8 +40,8 @@ const LoginForm = struct {
     area : cake.Rectangle,
 
     background : Bg = Bg { .data = {} },
-    login    : Input = Input { .data = .{}, .behavior = .{ .onInput = .login_change, .onDelete = .login_change }},
-    password : Input = Input { .data = .{}, .behavior = .{ .onInput = .password_change, .onDelete = .password_change } },
+    login    : Input = Input { .data = .{}, .behavior = .{ .on_input = .login_change, .on_delete = .login_change }},
+    password : Input = Input { .data = .{}, .behavior = .{ .on_input = .password_change, .on_delete = .password_change } },
 
     frame : Frame = Frame { .data = .{ .thickness = 4 } },
 

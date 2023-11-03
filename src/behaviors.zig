@@ -55,9 +55,9 @@ pub fn TextInput (comptime Event : type) type {
     return struct {
         last_input : ?u21 = null,
 
-        onInput : EventType = default,
-        onDelete : EventType = default,
-        onCursorMove : EventType = default,
+        on_input : EventType = default,
+        on_delete : EventType = default,
+        on_cursor_move : EventType = default,
 
         pub fn validate (comptime Data : type) bool {
             const has_text = @hasField(Data, "text") or
@@ -187,7 +187,7 @@ pub fn TextInput (comptime Event : type) type {
                     else @compileError("Text Input could not find a way to update the text string");
 
                     if (event_present) {
-                        if (self.onInput) |ie| {
+                        if (self.on_input) |ie| {
                             self.last_input = char;
                             event.ui.sendEvent(&ie);
                         }
@@ -232,7 +232,7 @@ pub fn TextInput (comptime Event : type) type {
                         }
                         self.last_input = deletion.deleted;
                         if (event_present) {
-                            if (self.onDelete) |ev| {
+                            if (self.on_delete) |ev| {
                                 event.ui.sendEvent(&ev);
                             }
                         }
@@ -251,7 +251,7 @@ pub fn TextInput (comptime Event : type) type {
                             else data.cursor = cursor;
 
                             if (event_present) {
-                                if (self.onCursorMove) |cme| {
+                                if (self.on_cursor_move) |cme| {
                                     event.ui.sendEvent(&cme);
                                 }
                             }
@@ -269,7 +269,7 @@ pub fn TextInput (comptime Event : type) type {
                             else data.cursor = cursor;
 
                             if (event_present) {
-                                if (self.onCursorMove) |cme| {
+                                if (self.on_cursor_move) |cme| {
                                     event.ui.sendEvent(&cme);
                                 }
                             }
