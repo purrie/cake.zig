@@ -2,10 +2,10 @@ const std = @import("std");
 const cake = @import("cake");
 const ray = @cImport(@cInclude("raylib.h"));
 
-const Bg    = cake.widgets.Decor(void, cake.looks_like.background);
-const Frame = cake.widgets.Decor(cake.contains.Frame, cake.looks_like.frame);
-const Label = cake.widgets.Decor(cake.contains.Text, cake.looks_like.label);
-const Display = cake.widgets.Decor(cake.contains.Text, cake.looks_like.text_display);
+const Bg    = cake.premade.Background;
+const Frame = cake.premade.Frame;
+const Label = cake.premade.Label;
+const Display = cake.premade.Plaque;
 
 const LoginForm = struct {
     const Form = cake.FixedUi(
@@ -15,16 +15,8 @@ const LoginForm = struct {
         },
         12
     );
-    const Input = cake.widgets.Widget(
-        cake.contains.FixedStringBuffer(255),
-        cake.looks_like.text_input,
-        cake.acts_like.TextInput(WidgetAction)
-    );
-    const Button = cake.widgets.Widget(
-        cake.contains.Text,
-        cake.looks_like.text_display,
-        cake.acts_like.Button(WidgetAction)
-    );
+    const Input = cake.premade.FixedTextInput(255, WidgetAction);
+    const Button = cake.premade.Button(WidgetAction);
     const Identity = enum {
         login, password
     };

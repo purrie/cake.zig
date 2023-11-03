@@ -179,7 +179,7 @@ const Tooltip = struct {
 };
 const ResourceBar = struct {
     const Ui = cake.FixedUi(.{}, 9);
-    const Background = cake.widgets.Decor(void, cake.looks_like.background);
+    const Background = cake.premade.Background;
     const Label = cake.widgets.Decor(cake.contains.FixedStringBuffer(buffer_size), cake.looks_like.label);
     const buffer_size = 20;
     const label_spacing = 16;
@@ -317,7 +317,7 @@ const BakeButton = struct {
         bake,
     };
     const Ui = cake.FixedUi(.{.Event = BakeEvent,}, 1);
-    const Button = cake.widgets.Widget(cake.contains.Text, cake.looks_like.text_display, cake.acts_like.Button(BakeEvent));
+    const Button = cake.premade.Button(BakeEvent);
     interface : Ui = Ui{ .theme = cake.theme_light },
 
     label : Button = .{
@@ -361,12 +361,8 @@ const BakeButton = struct {
 };
 const PurchaseButtons = struct {
     const Ui = cake.FixedUi(.{ .Identity = PastryType, .Event = PastryType }, 5);
-    const Background = cake.widgets.Decor(void, cake.looks_like.background);
-    const Button = cake.widgets.Widget(
-        cake.contains.Text,
-        cake.looks_like.text_display,
-        cake.acts_like.Button(PastryType),
-    );
+    const Background = cake.premade.Background;
+    const Button = cake.premade.Button(PastryType);
 
     background : Background = .{ .data = {} },
     cookie : Button = .{
@@ -516,7 +512,7 @@ const WarningWindow = struct {
         },
         1
     );
-    const Label = cake.widgets.Decor(cake.contains.Text, cake.looks_like.text_display);
+    const Label = cake.premade.Plaque;
     const reset_timer = 3;
 
     interface : Ui = .{

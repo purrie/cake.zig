@@ -14,9 +14,9 @@ const WidgetTheme = enum {
     light,
     danger,
 };
-const Bg = cake.widgets.Decor(void, cake.looks_like.background);
-const Frame = cake.widgets.Decor(cake.contains.Frame, cake.looks_like.frame);
-const Label = cake.widgets.Decor(cake.contains.Text, cake.looks_like.label);
+const Bg = cake.premade.Background;
+const Frame = cake.premade.Frame;
+const Label = cake.premade.Label;
 
 const Ui = struct {
     interface : TextUi = .{
@@ -29,13 +29,13 @@ const Ui = struct {
     },
     margin : f32 = 8,
 
-    background_top : Bg = .{ .data = {} },
+    background_top    : Bg = .{ .data = {} },
     background_bottom : Bg = .{ .data = {} },
 
-    label_top : Label = .{ .data = .{ .text = "Top Side", .font_size = 32 } },
+    label_top    : Label = .{ .data = .{ .text = "Top Side", .font_size = 32 } },
     label_bottom : Label = .{ .data = .{ .text = "Bottom Side", .font_size = 20 } },
 
-    frame : Frame = .{ .data = .{ .thickness = 4.0 } },
+    frame       : Frame = .{ .data = .{ .thickness = 4.0 } },
     other_frame : Frame = .{ .data = .{ .thickness = 3.0 } },
 
     pub fn connect (self : *@This()) ! void {

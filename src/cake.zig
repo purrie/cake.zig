@@ -20,6 +20,7 @@ pub const interface  = @import("interface.zig");
 pub const contains   = @import("data.zig");
 pub const acts_like  = @import("behaviors.zig");
 pub const looks_like = view.viewers(backend);
+pub const premade    = @import("premade_widgets.zig");
 
 pub const FixedUi = ui.UserInterface(backend).FixedUi;
 pub const Context = ui.UIContext;
