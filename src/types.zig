@@ -210,8 +210,9 @@ pub const PointerButton = enum {
 pub const PointerEvent = union (enum) {
     press : PointerButton,
     lift  : PointerButton,
-    wheel_slide  : f32,
-    wheel_delta  : Vector,
+    drag  : Vector,
+    wheel_slide : f32,
+    wheel_delta : Vector,
 };
 
 /// Result of a pointer event, used to determine which state the widget should go into as a result of the event

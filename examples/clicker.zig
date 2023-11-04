@@ -339,7 +339,7 @@ const BakeButton = struct {
         self.label.area = location;
     }
     pub fn click (self : *@This(), mouse : cake.Vector) bool {
-        self.interface.setPointerPosition(mouse);
+        self.interface.setPointerPosition(mouse) catch {};
         if (ray.IsMouseButtonPressed(ray.MOUSE_BUTTON_LEFT)) {
             self.interface.sendPointerEvent(.{ .press = .left }) catch {};
         }
@@ -432,7 +432,7 @@ const PurchaseButtons = struct {
     }
 
     pub fn update (self : *@This(), mouse : cake.Vector) ! bool {
-        self.interface.setPointerPosition(mouse);
+        try self.interface.setPointerPosition(mouse);
         if (ray.IsMouseButtonPressed(ray.MOUSE_BUTTON_LEFT)) {
             try self.interface.sendPointerEvent(.{ .press = .left });
         }

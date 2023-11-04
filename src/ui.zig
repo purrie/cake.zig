@@ -136,9 +136,36 @@ pub fn UserInterface (comptime Renderer : type) type {
                         .active = if (self.active) |a| a.meta.identity else null,
                     };
                 }
-                pub fn setPointerPosition (self : *Ui, position : ?Vector) void {
-                    self.pointer = position;
+                pub fn setPointerPosition (self : *Ui, position : ?Vector) ! void {
+                    defer self.pointer = position;
                     if (position) |pos| {
+                        // handle drag mouse event
+                        if (self.active) |act| {
+                            if (self.pointer) |ptr| {
+                                const ui = interface.Ui {
+                                    .context = self,
+                                    .vtable = .{
+                                        .isActive = &isActive,
+                                        .sendEvent = &sendEvent,
+                                    }
+                                };
+                                const state = self.widgetState(act);
+                                const result = try act.interface.pointerEvent(ui, pos, .{ .drag = pos - ptr }, state);
+                                switch (result) {
+                                    .activated => {},
+                                    .deactivated => self.active = null,
+                                    .focused => {},
+                                    .unfocused => {
+                                        self.active = null;
+                                        self.focus = null;
+                                    },
+                                    .processed => {},
+                                    .ignored => {},
+                                }
+                            }
+                        }
+
+                        // handle updating which widget has focus
                         if (self.hover) |hov| {
                             if (hov.interface.containsPoint(pos)) {
                                 return;

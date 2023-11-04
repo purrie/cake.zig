@@ -153,7 +153,7 @@ const LoginForm = struct {
     }
     pub fn update (self : *@This()) ! ?FormResult {
         const cursor = ray.GetMousePosition();
-        self.interface.setPointerPosition(@bitCast(cursor));
+        try self.interface.setPointerPosition(@bitCast(cursor));
 
         if (ray.IsMouseButtonPressed(ray.MOUSE_BUTTON_LEFT)) {
             try self.interface.sendPointerEvent(.{ .press = .left });
