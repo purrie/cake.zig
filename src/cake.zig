@@ -44,6 +44,7 @@ pub const KeyboardEvent    = types.KeyboardEvent;
 pub const KeyboardModifier = types.KeyboardModifier;
 pub const KeyboardContext  = types.KeyboardContext;
 pub const BehaviorContext  = types.BehaviorContext;
+pub const DrawingContext   = types.DrawingContext;
 
 pub const theme_light = style.light_theme;
 pub const theme_dark  = style.dark_theme;
