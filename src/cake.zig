@@ -48,3 +48,7 @@ pub const DrawingContext   = types.DrawingContext;
 
 pub const theme_light = style.light_theme;
 pub const theme_dark  = style.dark_theme;
+
+test {
+    @import("std").testing.refAllDeclsRecursive(@This());
+}
