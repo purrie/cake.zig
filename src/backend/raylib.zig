@@ -11,6 +11,10 @@ pub const Font = ray.Font;
 pub var default_font : ?ray.Font = null;
 
 pub const input = struct {
+    pub fn cursorPosition () Vector {
+        const cursor = ray.GetMousePosition();
+        return .{ cursor.x, cursor.y };
+    }
     pub fn keyboardEvent () ?cake.KeyboardEvent {
         const char = ray.GetCharPressed();
         const key = ray.GetKeyPressed();
