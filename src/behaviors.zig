@@ -471,7 +471,7 @@ pub fn WindowSliderVertical (comptime EventType : type, comptime onChange : fn(o
             }
         }
         fn updateValue (self : *@This(), data : anytype, context : cake.PointerContext) void {
-            if (data.size == 0 or data.max == data.min) {
+            if (data.size == 0 or data.max == data.min or data.size > data.max) {
                 if (data.value != data.min) {
                     const event = onChange(data.value, data.min);
                     context.ui.sendEvent(&event);
