@@ -81,7 +81,8 @@ const Examples = enum {
     hello_world,
     styling,
     password_form,
-    clicker
+    clicker,
+    todo,
 };
 
 fn buildExample (b : *std.Build, target : std.zig.CrossTarget, optimize : std.builtin.OptimizeMode) void {
@@ -97,6 +98,7 @@ fn buildExample (b : *std.Build, target : std.zig.CrossTarget, optimize : std.bu
                 .styling => "examples/styling.zig",
                 .password_form => "examples/password.zig",
                 .clicker => "examples/clicker.zig",
+                .todo => "examples/todo.zig"
             }
         },
     });
@@ -105,6 +107,7 @@ fn buildExample (b : *std.Build, target : std.zig.CrossTarget, optimize : std.bu
         .clicker,
         .password_form,
         .styling,
+        .todo,
         .hello_world => {
             const cake = addCake(b, exe, target, optimize, .raylib);
             cake.linkLibC();

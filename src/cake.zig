@@ -22,8 +22,9 @@ pub const acts_like  = @import("behaviors.zig");
 pub const looks_like = view.viewers(backend);
 pub const premade    = @import("premade_widgets.zig");
 
-pub const FixedUi = ui.UserInterface(backend).FixedUi;
-pub const Context = ui.UIContext;
+pub const FixedUi   = ui.UserInterface(backend).FixedUi;
+pub const DynamicUi = ui.UserInterface(backend).DynamicUi;
+pub const Context   = ui.UIContext;
 
 pub const FixedPalette   = style.FixedPalette;
 pub const DefaultPalette = style.DefaultPalette;
