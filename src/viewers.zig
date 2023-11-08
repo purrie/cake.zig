@@ -115,8 +115,15 @@ pub fn viewers(comptime Renderer : type) type {
 
                 var zone = context.area;
                 Renderer.drawRectangle(zone, bg);
-                zone.shrinkBy(@splat(margin));
-                Renderer.drawText(text, zone.position, @min(font_size, zone.size[1]), color);
+                const size = @min(font_size, zone.size[1]);
+                zone.squishWidthBy(4);
+                if (margin == 0) {
+                    zone.shrinkHeightTo(size);
+                }
+                else {
+                    zone.shrinkBy(@splat(margin));
+                }
+                Renderer.drawText(text, zone.position, size, color);
             }
         };
         pub const text_display = struct {
@@ -264,6 +271,7 @@ pub fn viewers(comptime Renderer : type) type {
                 Renderer.drawRectangle(context.area, bg);
 
                 var text_area = context.area;
+                text_area.squishWidthBy(4);
                 if (margin == 0) {
                     text_area.shrinkHeightTo(font_size);
                 }
