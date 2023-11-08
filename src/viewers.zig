@@ -264,8 +264,12 @@ pub fn viewers(comptime Renderer : type) type {
                 Renderer.drawRectangle(context.area, bg);
 
                 var text_area = context.area;
-                text_area.shrinkBy(@splat(margin));
-                text_area.shrinkHeightTo(font_size);
+                if (margin == 0) {
+                    text_area.shrinkHeightTo(font_size);
+                }
+                else {
+                    text_area.shrinkBy(@splat(margin));
+                }
                 Renderer.drawText(text, text_area.position, font_size, text_color);
 
                 if (context.state.focus) {
