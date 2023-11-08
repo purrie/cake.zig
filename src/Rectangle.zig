@@ -52,7 +52,8 @@ pub fn shrinkByPercent (self : *Rectangle, percent : Vector) void {
 }
 /// Decreases size of the rect while keeping it in the center
 pub fn shrinkToPercent (self : *Rectangle, percent : Vector) void {
-    assert(percent > 0.0 and percent <= 1.0);
+    assert(@reduce(.And, percent >= vector_zero));
+    assert(@reduce(.And, percent <= vector_one));
 
     const p = self.size * percent;
     const diff = self.size - p;
@@ -101,7 +102,7 @@ pub fn shrinkHeightBy (self : *Rectangle, height : f32) void {
     assert(height <= self.size[1]);
 
     self.size[1] -= height;
-    self.position += height * 0.5;
+    self.position[1] += height * 0.5;
 }
 /// Decreases size of the rect while keeping it in the center
 pub fn shrinkHeightToPercent (self : *Rectangle, height : f32) void {
@@ -137,7 +138,7 @@ pub fn squishTo (self : *Rectangle, to : Vector) void {
 }
 /// Decreases size of the rect towards the bottom right corner
 pub fn squishByPercent (self : *Rectangle, percent : Vector) void {
-    assert(@reduce(.And, percent >= vector_zero ));
+    assert(@reduce(.And, percent >= vector_zero));
     assert(@reduce(.And, percent <= vector_one));
 
     const p = self.size * percent;
@@ -146,7 +147,8 @@ pub fn squishByPercent (self : *Rectangle, percent : Vector) void {
 }
 /// Decreases size of the rect towards the bottom right corner
 pub fn squishToPercent (self : *Rectangle, percent : Vector) void {
-    assert(percent > 0.0 and percent <= 1.0);
+    assert(@reduce(.And, percent >= vector_zero));
+    assert(@reduce(.And, percent <= vector_one));
 
     const p = self.size * percent;
     const diff = self.size - p;

@@ -19,8 +19,8 @@ pub const WidgetState = packed struct {
     active   : bool = true,
 
     pub fn isMismatch (self : WidgetState, other : WidgetState) bool {
-        const me : u8 = @bitCast(self);
-        const you : u8 = @bitCast(other);
+        const me : u5 = @bitCast(self);
+        const you : u5 = @bitCast(other);
         return me & you == 0;
     }
 
