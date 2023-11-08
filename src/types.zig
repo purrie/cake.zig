@@ -281,7 +281,7 @@ pub const BehaviorContext = struct {
     pointer_event    : ?PointerEvent,
     keyboard_event   : ?KeyboardEvent,
     state : WidgetState,
-    ui    : interface.Behavior,
+    ui    : interface.Ui,
 };
 /// Data passed to widgets on pointer events
 pub const PointerContext = struct {
@@ -289,12 +289,12 @@ pub const PointerContext = struct {
     pointer : Vector,
     event   : PointerEvent,
     state   : WidgetState,
-    ui      : interface.Behavior,
+    ui      : interface.Ui,
 };
 /// Data passed to widgets on keyboard events
 pub const KeyboardContext = struct {
     area  : Rectangle,
     event : KeyboardEvent,
     state : WidgetState,
-    ui    : interface.Behavior,
+    ui    : interface.Ui,
 };

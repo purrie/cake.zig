@@ -24,7 +24,7 @@ pub fn Button (comptime Event : type) type {
                     return .activated;
                 },
                 .lift => {
-                    if (event.ui.isActive()) {
+                    if (event.state.active) {
                         event.ui.sendEvent(&self.event);
                     }
                     return .deactivated;
@@ -400,7 +400,7 @@ pub fn TextInput (comptime Event : type) type {
                     return .activated;
                 }
                 else if (event.event == .lift) {
-                    if (event.ui.isActive()) {
+                    if (event.state.active) {
                         return .deactivated;
                     }
                 }

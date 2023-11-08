@@ -145,7 +145,6 @@ pub fn UserInterface (comptime Renderer : type) type {
                                 const ui = interface.Ui {
                                     .context = self,
                                     .vtable = .{
-                                        .isActive = &isActive,
                                         .sendEvent = &sendEvent,
                                     }
                                 };
@@ -211,7 +210,6 @@ pub fn UserInterface (comptime Renderer : type) type {
                     const ui = interface.Ui {
                         .context = self,
                         .vtable = .{
-                            .isActive = &isActive,
                             .sendEvent = &sendEvent,
                         }
                     };
@@ -262,7 +260,6 @@ pub fn UserInterface (comptime Renderer : type) type {
                     const ui = interface.Ui {
                         .context = self,
                         .vtable = .{
-                            .isActive = &isActive,
                             .sendEvent = &sendEvent,
                         }
                     };
@@ -309,7 +306,6 @@ pub fn UserInterface (comptime Renderer : type) type {
                         const ui = interface.Ui {
                             .context = self,
                             .vtable = .{
-                                .isActive = &isActive,
                                 .sendEvent = &sendEvent,
                             }
                         };
@@ -360,11 +356,6 @@ pub fn UserInterface (comptime Renderer : type) type {
                     var self : *Ui = @ptrCast(@alignCast(ptr));
                     const event : *const context.Event = @ptrCast(@alignCast(event_ptr));
                     self.event = event.*;
-                }
-                fn isActive (ptr : *const anyopaque, widget_interface_ptr : *const anyopaque) bool {
-                    const self : *const Ui = @ptrCast(@alignCast(ptr));
-                    const active = self.active orelse return false;
-                    return active.interface.context == widget_interface_ptr;
                 }
             };
         }
