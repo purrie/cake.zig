@@ -17,3 +17,9 @@ pub fn FixedStringBuffer (comptime size : usize) type {
 pub const Frame = struct {
     thickness : f32 = 2,
 };
+pub const SizedRange = struct {
+    min : f32,
+    max : f32,
+    value : f32,
+    size : f32,
+};

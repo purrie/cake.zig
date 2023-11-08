@@ -412,3 +412,85 @@ pub fn TextInput (comptime Event : type) type {
         }
     };
 }
+
+pub fn WindowSliderVertical (comptime EventType : type, comptime onChange : fn(old : f32, new : f32) EventType) type {
+    return struct {
+        click_offset : ?f32 = null,
+        pub fn pointerEvent (self : *@This(), data : anytype, context : cake.PointerContext) cake.EventResult {
+            switch (context.event) {
+                .press => {
+                    self.calculateOffset(data, context);
+                    self.updateValue(data, context);
+                    return .activated;
+                },
+                .drag => {
+                    if (context.area.contains(context.pointer))
+                        self.updateValue(data, context);
+
+                    return .processed;
+                },
+                .lift => {
+                    self.click_offset = null;
+                    return .deactivated;
+                },
+                .wheel_slide => |amount| {
+                    if (amount == 0) return .processed;
+                    const value = @max(data.min, @min(data.max, data.value + amount));
+                    const event = onChange(data.value, value);
+                    context.ui.sendEvent(&event);
+                    data.value = value;
+                },
+                .wheel_delta => |delta| {
+                    if (delta[1] == 0) return .processed;
+                    const value = @max(data.min, @min(data.max, data.value + delta[1]));
+                    const event = onChange(data.value, value);
+                    context.ui.sendEvent(&event);
+                    data.value = value;
+                }
+            }
+            return .processed;
+        }
+        fn calculateOffset (self : *@This(), data : anytype, context : cake.PointerContext) void {
+            if (data.size == 0 or data.max == data.min) {
+                self.click_offset = null;
+                return;
+            }
+
+            const total_size = data.max - data.min;
+            const slider_size_percent = data.size / total_size;
+            const slider_size = slider_size_percent * context.area.size[1];
+            const slider_pos_percent = @min(total_size, data.value - data.min ) / total_size;
+            const slider_pos = context.area.size[1] * slider_pos_percent;
+            const local_cursor = ( context.pointer[1] - context.area.position[1] ) - slider_pos;
+
+            if (local_cursor < 0 or local_cursor > slider_size) {
+                self.click_offset = null;
+            }
+            else {
+                self.click_offset = local_cursor / slider_size;
+            }
+        }
+        fn updateValue (self : *@This(), data : anytype, context : cake.PointerContext) void {
+            if (data.size == 0 or data.max == data.min) {
+                if (data.value != data.min) {
+                    const event = onChange(data.value, data.min);
+                    context.ui.sendEvent(&event);
+                    data.value = data.min;
+                }
+                return;
+            }
+            const slide_offset = self.click_offset orelse 0.5;
+            const local_pointer = context.pointer[1] - context.area.position[1];
+            const percent = local_pointer / context.area.size[1];
+            const scale = data.size / (data.max - data.min) * slide_offset;
+            const actual_percent = percent - scale;
+            const value = data.min * (1.0 - actual_percent) + data.max * actual_percent;
+            const clamped_value = @min(data.max - data.size, @max(data.min, value));
+            if (data.value != clamped_value) {
+                const event = onChange(data.value, clamped_value);
+                context.ui.sendEvent(&event);
+                data.value = clamped_value;
+            }
+        }
+    };
+}

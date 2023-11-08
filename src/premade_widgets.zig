@@ -14,3 +14,6 @@ pub fn Button (comptime Event : type) type {
 pub fn FixedTextInput (comptime size : usize, comptime Event : type) type {
     return cake.widgets.Widget(contains.FixedStringBuffer(size), looks_like.text_input, acts_like.TextInput(Event));
 }
+pub fn WindowScrollVertical(comptime Event : type, comptime onChange : fn (old : f32, new : f32) Event) type {
+    return cake.widgets.Widget(contains.SizedRange, looks_like.window_scroll_vertical, acts_like.WindowSliderVertical(Event, onChange));
+}

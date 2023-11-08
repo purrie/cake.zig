@@ -313,5 +313,37 @@ pub fn viewers(comptime Renderer : type) type {
                 Renderer.drawFrame(context.area, thickness, color);
             }
         };
+        pub const window_scroll_vertical = struct {
+            pub fn validate (comptime Data : type) bool {
+                if (! @hasField(Data, "min")) return false;
+                if (! @hasField(Data, "max")) return false;
+                if (! @hasField(Data, "value")) return false;
+                if (! @hasField(Data, "size")) return false;
+                return true;
+            }
+            pub fn draw (data : anytype, context : Context) void {
+                std.debug.assert(data.size >= 0.0);
+
+                const color_bg = context.colors.background.normal;
+                const color = context.state.selectColor(context.colors.foreground);
+
+                Renderer.drawRectangle(context.area, color_bg);
+
+                var area = context.area;
+                area.shrinkBy(.{ @min(6, context.area.size[0] * 0.1), @min(6, context.area.size[1] * 0.1) });
+                const total_size = data.max - data.min;
+
+                if (total_size > data.size) {
+                    const diff = data.size / total_size;
+                    area.size[1] *= diff;
+                    const pos_percent = @min(total_size - data.size, data.value - data.min ) / ( total_size - data.size );
+                    area.position[1] += (context.area.size[1] - area.size[1]) * pos_percent;
+                    Renderer.drawRectangle(area, color);
+                }
+                else {
+                    Renderer.drawRectangle(area, color);
+                }
+            }
+        };
     };
 }
